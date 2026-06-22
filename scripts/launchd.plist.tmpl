@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS launchd template: runs `literature-digest run` every two weeks.
+
+  Install:
+    1. Substitute the placeholders below:
+         {{PYTHON}}        -> path to your venv python, e.g. /Users/you/.venv/bin/python
+         {{PROJECT_DIR}}   -> absolute path to this repo
+         {{USER}}          -> your macOS username
+    2. Copy to ~/Library/LaunchAgents/ai.literature-digest.run.plist
+    3. Load it:   launchctl load ~/Library/LaunchAgents/ai.literature-digest.run.plist
+    4. Verify:    launchctl list | grep literature-digest
+
+  StartCalendarInterval fires every 2 weeks on Monday at 09:00 local time.
+  launchd runs missed jobs on wake, so laptop sleep won't skip a run.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.literature-digest.run</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{PYTHON}}</string>
+        <string>-m</string>
+        <string>literature_digest.cli</string>
+        <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{PROJECT_DIR}}</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+        <key>Interval</key>
+        <integer>2</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>{{PROJECT_DIR}}/data/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{PROJECT_DIR}}/data/launchd.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

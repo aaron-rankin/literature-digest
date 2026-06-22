@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Literature Digest</title>
+  <style>
+    :root {
+      --bg: #fafafa; --fg: #1f2937; --muted: #6b7280;
+      --border: #e5e7eb; --accent: #2563eb;
+      --actionable: #16a34a; --monitoring: #ca8a04; --background: #6b7280;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+           background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; }
+    h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; }
+    .meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    td a { color: var(--accent); text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+    .count { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <h1>Literature Digest</h1>
+  <div class="meta">Bi-weekly research digest for elite-sports performance &middot; generated {{ generated_at }}</div>
+
+  {% if areas %}
+  <table>
+    <thead>
+      <tr>
+        <th>Research area</th>
+        <th>Last run</th>
+        <th class="count">Articles</th>
+        <th class="count">Threshold</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for area in areas %}
+      <tr>
+        <td>{{ area.name }}</td>
+        <td>{{ area.last_run or "never" }}</td>
+        <td class="count">{{ area.article_count }}</td>
+        <td class="count">{{ area.threshold }}</td>
+        <td><a href="areas/{{ area.slug }}.html">view report &rarr;</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No research areas configured. Edit <code>config/areas.yaml</code> to add one.</p>
+  {% endif %}
+</body>
+</html>
