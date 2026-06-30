@@ -1,0 +1,1 @@
+( TITLE-ABS-KEY-AUTH ( spatiotemporal ) AND TITLE-ABS-KEY-AUTH ( football ) OR TITLE-ABS-KEY-AUTH ( soccer ) ) 

@@ -15,7 +15,8 @@ htmlcov/
 .env.local
 
 # Runtime data (SQLite state, cached emails, generated reports)
-data/
+.db
+
 
 # OS
 .DS_Store
