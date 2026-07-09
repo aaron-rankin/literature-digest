@@ -21,6 +21,7 @@ from literature_digest.screen import LLMClient, Screener
 from literature_digest.sources import (
     CrossrefSource,
     Deduper,
+    LocalSource,
     OpenAlexSource,
     ScopusApiSource,
     ScopusEmailSource,
@@ -59,6 +60,8 @@ def run_area(
     deduper: Deduper,
     limit: int | None = None,
     debug: bool = False,
+    local: bool = False,
+    local_source: LocalSource | None = None,
 ) -> list[Article]:
     """Run the full pipeline for a single area. Returns retained articles.
 
@@ -67,40 +70,56 @@ def run_area(
     does NOT advance `last_run`, so the remaining articles are picked back up
     (and already-processed ones skipped via `seen_dois`) on the next run
     instead of falling outside the date-filter window forever.
+
+    `local` runs entirely from on-disk fixtures via `local_source` — no network
+    sources are touched, seen-DOI skipping is disabled (so the same fixtures
+    re-process every run), and `last_run` is not advanced. Use it to iterate on
+    screening/summarization/reporting without burning external API quota.
     """
     last_run = store.get_last_run(area.slug)
     run_id = store.start_run(area.slug)
     console.print(f"[bold blue]#{area.slug}[/] since={last_run or 'first run'}")
 
-    # ── 1. Fetch from all sources ──────────────────────────────────────────
-    from_email = _safe_fetch("scopus_email", lambda: email_source.fetch_articles(area, last_run))
-    from_scopus = _safe_fetch("scopus_api", lambda: scopus_api.search(area, last_run))
-    from_openalex = _safe_fetch("openalex", lambda: openalex.search(area, last_run))
-    from_crossref = _safe_fetch("crossref", lambda: crossref.search(area, last_run))
-    console.print(
-        "  fetched: "
-        f"email={len(from_email)} scopus={len(from_scopus)} "
-        f"openalex={len(from_openalex)} crossref={len(from_crossref)}"
-    )
+    # ── 1. Fetch ───────────────────────────────────────────────────────────
+    if local:
+        assert local_source is not None
+        enriched = local_source.search(area, last_run)
+        console.print(f"  [magenta]local mode[/] fixtures={len(enriched)}")
+        all_articles = enriched
+    else:
+        from_email = _safe_fetch(
+            "scopus_email", lambda: email_source.fetch_articles(area, last_run)
+        )
+        from_scopus = _safe_fetch("scopus_api", lambda: scopus_api.search(area, last_run))
+        from_openalex = _safe_fetch("openalex", lambda: openalex.search(area, last_run))
+        from_crossref = _safe_fetch("crossref", lambda: crossref.search(area, last_run))
+        console.print(
+            "  fetched: "
+            f"email={len(from_email)} scopus={len(from_scopus)} "
+            f"openalex={len(from_openalex)} crossref={len(from_crossref)}"
+        )
 
-    # Enrich email-extracted DOIs via Scopus API + OpenAlex (Phase 3)
-    enriched: list[Article] = []
-    for stub in from_email:
-        if stub.doi:
-            art = scopus_api.enrich(stub.doi) or openalex.enrich(stub.doi) or stub
-            enriched.append(art)
-        else:
-            enriched.append(stub)
+        # Enrich email-extracted DOIs via Scopus API + OpenAlex (Phase 3)
+        enriched = []
+        for stub in from_email:
+            if stub.doi:
+                art = scopus_api.enrich(stub.doi) or openalex.enrich(stub.doi) or stub
+                enriched.append(art)
+            else:
+                enriched.append(stub)
+        all_articles = enriched + from_scopus + from_openalex + from_crossref
 
     # ── 2. Dedupe & merge ──────────────────────────────────────────────────
-    all_articles = enriched + from_scopus + from_openalex + from_crossref
     merged = deduper.dedupe(all_articles)
     for a in merged:
         a.area_slug = area.slug
     console.print(f"  deduped: {len(all_articles)} -> {len(merged)}")
 
-    # ── 3. Filter already-seen ─────────────────────────────────────────────
-    new_articles = [a for a in merged if not (a.doi and store.is_seen(a.doi, area.slug))]
+    # ── 3. Filter already-seen (skipped in local mode so fixtures replay) ───
+    if local:
+        new_articles = merged
+    else:
+        new_articles = [a for a in merged if not (a.doi and store.is_seen(a.doi, area.slug))]
     console.print(f"  unseen: {len(new_articles)}")
 
     truncated = False
@@ -135,7 +154,7 @@ def run_area(
                 n = len(art.action_points)
                 console.print(f"  [summarize] {label[:80]!r} action_points={n}")
             retained.append(art)
-        if art.doi:
+        if art.doi and not local:
             store.mark_seen(art.doi, area.slug)
 
     dropped = len(new_articles) - len(retained)
@@ -147,7 +166,9 @@ def run_area(
     store.finish_run(
         run_id, ingested=len(merged), retained=len(retained), dropped=dropped
     )
-    if truncated:
+    if local:
+        console.print("  [magenta]  local mode — last_run left unchanged[/]")
+    elif truncated:
         console.print("  [yellow]  truncated run — last_run left unchanged[/]")
     else:
         store.set_last_run(area.slug)
@@ -159,8 +180,13 @@ def run_all(
     only_area: str | None = None,
     limit: int | None = None,
     debug: bool = False,
+    local: bool = False,
 ) -> Path:
     """Run the pipeline for every configured area and render reports.
+
+    `local=True` runs fully offline from `settings.fixtures_dir` fixtures and
+    writes state to a separate `state.local.db`, leaving the production
+    `state.db` untouched.
 
     Returns the path to the generated `index.html`.
     """
@@ -176,6 +202,7 @@ def run_all(
     scopus_api = ScopusApiSource(settings)
     openalex = OpenAlexSource(settings)
     crossref = CrossrefSource(settings)
+    local_source = LocalSource(settings)
     deduper = Deduper()
 
     renderer = ReportRenderer(
@@ -183,8 +210,9 @@ def run_all(
         output_dir=settings.data_dir / "reports",
     )
 
+    db_name = "state.local.db" if local else "state.db"
     index_rows: list[AreaIndexRow] = []
-    with Store(settings.data_dir / "state.db") as store:
+    with Store(settings.data_dir / db_name) as store:
         for area in areas_file.areas:
             if only_area and area.slug != only_area:
                 continue
@@ -194,6 +222,7 @@ def run_all(
                 screener, summarizer,
                 email_source, scopus_api, openalex, crossref, deduper,
                 limit=limit, debug=debug,
+                local=local, local_source=local_source,
             )
             renderer.render_area(area, retained, threshold)
             index_rows.append(

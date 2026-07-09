@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     data_dir: Annotated[Path, Field(default=Path("./data"))]
     areas_config: Annotated[Path, Field(default=Path("./config/areas.yaml"))]
     org_context: Annotated[Path, Field(default=Path("./config/organisation_context.md"))]
+    # Offline fixtures for `run --local` (one <area_slug>/ subdir of Article JSON each)
+    fixtures_dir: Annotated[Path, Field(default=Path("./data/fixtures"))]
 
 
 def load_areas(path: Path | None = None) -> AreasFile:
