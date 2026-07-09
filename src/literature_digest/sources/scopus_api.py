@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import LoadedArea, Settings
 from literature_digest.models import Article
 
 
@@ -35,7 +35,7 @@ class ScopusApiSource:
         # TODO(phase-3): GET ?query=DOI(<doi>) and parse the response
         return None
 
-    def search(self, area: AreaConfig, since: datetime | None) -> list[Article]:
+    def search(self, area: LoadedArea, since: datetime | None) -> list[Article]:
         """Search Scopus by `area.scopus_query` since `since`. PLACEHOLDER: returns []."""
         # TODO(phase-3): build query with PUBDATETIME filter, paginate, parse
         return []

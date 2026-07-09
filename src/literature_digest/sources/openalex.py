@@ -1,13 +1,13 @@
 """OpenAlex API client (free, no key, polite pool via mailto).
 
 Contract:
-    search(area: AreaConfig, since: datetime | None) -> list[Article]
+    search(area: LoadedArea, since: datetime | None) -> list[Article]
     enrich(doi: str) -> Article | None
 
 Uses `https://api.openalex.org/works` with `mailto=` in the query string to join
-the polite pool (faster, more reliable rate limits). Keyword search uses the
-boolean `search` parameter (OR of the area's quoted keywords) plus a
-`from_publication_date` filter. Abstracts are reconstructed from OpenAlex's
+the polite pool (faster, more reliable rate limits). Searches each parsed term
+independently (OR of that term's quoted keywords) plus a `from_publication_date`
+filter, then deduplicates by DOI. Abstracts are reconstructed from OpenAlex's
 `abstract_inverted_index` back into prose.
 """
 
@@ -18,8 +18,9 @@ from typing import Any
 
 import httpx
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import LoadedArea, Settings
 from literature_digest.models import Article
+from literature_digest.query import UnsupportedScopusSyntax, parse
 from literature_digest.sources.dedupe import normalize_doi
 
 _SOURCE = "openalex"
@@ -36,10 +37,31 @@ class OpenAlexSource:
         self.settings = settings
 
     # ── public API ─────────────────────────────────────────────────────────
-    def search(self, area: AreaConfig, since: datetime | None) -> list[Article]:
-        """Search OpenAlex for `area.keywords` published since `since`."""
+    def search(self, area: LoadedArea, since: datetime | None) -> list[Article]:
+        """Search OpenAlex for each term in `area` and deduplicate by DOI."""
+        seen: set[str] = set()
+        articles: list[Article] = []
+        for term in area.terms:
+            parsed = term.parsed
+            if parsed is None:
+                try:
+                    parsed = parse(term.raw_query, term_name=term.name)
+                except UnsupportedScopusSyntax:
+                    continue
+            if not parsed.terms:
+                continue
+            for art in self._search_keywords(parsed.terms, since):
+                if art.doi and art.doi in seen:
+                    continue
+                if art.doi:
+                    seen.add(art.doi)
+                articles.append(art)
+        return articles
+
+    def _search_keywords(self, keywords: list[str], since: datetime | None) -> list[Article]:
+        """Search OpenAlex for one keyword list published since `since`."""
         params: dict[str, Any] = {
-            "search": _boolean_query(area.keywords),
+            "search": _boolean_query(keywords),
             "per-page": _PER_PAGE,
             "cursor": "*",
         }

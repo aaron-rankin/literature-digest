@@ -22,7 +22,7 @@ import webbrowser
 from rich.console import Console
 from rich.table import Table
 
-from literature_digest.config import Settings, load_areas
+from literature_digest.config import Settings, discover_areas
 from literature_digest.pipeline import run_all
 from literature_digest.screen import LLMClient
 
@@ -31,18 +31,18 @@ console = Console()
 
 def cmd_list_areas(args: argparse.Namespace) -> int:
     settings = Settings()
-    areas_file = load_areas(settings.areas_config)
+    areas = discover_areas(settings)
     table = Table(title="Configured research areas")
     table.add_column("slug", style="cyan")
     table.add_column("name")
-    table.add_column("keywords", overflow="fold")
+    table.add_column("terms", justify="right")
     table.add_column("threshold", justify="right")
-    for area in areas_file.areas:
-        threshold = areas_file.threshold_for(area)
+    for area in areas:
+        threshold = area.threshold if area.threshold is not None else "(default)"
         table.add_row(
             area.slug,
             area.name,
-            ", ".join(area.keywords),
+            str(len(area.terms)),
             str(threshold),
         )
     console.print(table)

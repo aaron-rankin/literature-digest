@@ -14,7 +14,13 @@ from pathlib import Path
 import httpx
 from rich.console import Console
 
-from literature_digest.config import AreaConfig, Settings, load_areas, load_org_context
+from literature_digest.config import (
+    LoadedArea,
+    Settings,
+    discover_areas,
+    load_areas,
+    load_org_context,
+)
 from literature_digest.models import Article
 from literature_digest.report import AreaIndexRow, ReportRenderer
 from literature_digest.screen import LLMClient, Screener
@@ -45,7 +51,7 @@ def _safe_fetch(label: str, fn: Callable[[], list[Article]]) -> list[Article]:
 
 
 def run_area(
-    area: AreaConfig,
+    area: LoadedArea,
     settings: Settings,
     store: Store,
     threshold: int,
@@ -139,14 +145,10 @@ def run_area(
             store.mark_seen(art.doi, area.slug)
 
     dropped = len(new_articles) - len(retained)
-    console.print(
-        f"  retained={len(retained)} dropped={dropped} threshold={threshold}"
-    )
+    console.print(f"  retained={len(retained)} dropped={dropped} threshold={threshold}")
 
     # ── 6. Update state ────────────────────────────────────────────────────
-    store.finish_run(
-        run_id, ingested=len(merged), retained=len(retained), dropped=dropped
-    )
+    store.finish_run(run_id, ingested=len(merged), retained=len(retained), dropped=dropped)
     if truncated:
         console.print("  [yellow]  truncated run — last_run left unchanged[/]")
     else:
@@ -167,6 +169,7 @@ def run_all(
     settings = settings or Settings()
     areas_file = load_areas(settings.areas_config)
     org_context = load_org_context(settings.org_context)
+    loaded_areas = discover_areas(settings, areas_file)
 
     # Construct clients once, share across areas
     llm = LLMClient(settings)
@@ -185,15 +188,25 @@ def run_all(
 
     index_rows: list[AreaIndexRow] = []
     with Store(settings.data_dir / "state.db") as store:
-        for area in areas_file.areas:
+        for area in loaded_areas:
             if only_area and area.slug != only_area:
                 continue
-            threshold = areas_file.threshold_for(area)
+            threshold = areas_file.threshold_for(area.config)
             retained = run_area(
-                area, settings, store, threshold, org_context,
-                screener, summarizer,
-                email_source, scopus_api, openalex, crossref, deduper,
-                limit=limit, debug=debug,
+                area,
+                settings,
+                store,
+                threshold,
+                org_context,
+                screener,
+                summarizer,
+                email_source,
+                scopus_api,
+                openalex,
+                crossref,
+                deduper,
+                limit=limit,
+                debug=debug,
             )
             renderer.render_area(area, retained, threshold)
             index_rows.append(

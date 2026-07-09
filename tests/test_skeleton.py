@@ -75,9 +75,6 @@ def test_pipeline_run_produces_empty_reports(
 
     index_path = run_all()
     assert index_path.exists()
-    assert (tmp_path / "data" / "reports" / "areas" / "sports-nutrition.html").exists()
-    assert (tmp_path / "data" / "reports" / "areas" / "recovery-and-sleep.html").exists()
-    # The index should mention each area name (Jinja2 escapes "&" -> "&amp;")
+    assert (tmp_path / "data" / "reports" / "areas" / "data_science.html").exists()
     html = index_path.read_text(encoding="utf-8")
-    assert "Sports Nutrition" in html
-    assert "Recovery &amp; Sleep" in html
+    assert "Data Science" in html
