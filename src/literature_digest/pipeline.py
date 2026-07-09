@@ -57,19 +57,31 @@ def run_area(
     openalex: OpenAlexSource,
     crossref: CrossrefSource,
     deduper: Deduper,
+    limit: int | None = None,
+    debug: bool = False,
 ) -> list[Article]:
-    """Run the full pipeline for a single area. Returns retained articles."""
+    """Run the full pipeline for a single area. Returns retained articles.
+
+    `limit` caps how many new articles are screened/summarized this run — for
+    dry-running against a local LLM without waiting hours. A truncated run
+    does NOT advance `last_run`, so the remaining articles are picked back up
+    (and already-processed ones skipped via `seen_dois`) on the next run
+    instead of falling outside the date-filter window forever.
+    """
     last_run = store.get_last_run(area.slug)
     run_id = store.start_run(area.slug)
     console.print(f"[bold blue]#{area.slug}[/] since={last_run or 'first run'}")
 
     # ── 1. Fetch from all sources ──────────────────────────────────────────
-    # Sources are placeholders for now; they return [] or None. Real fetching
-    # lands in Phase 2 (free APIs) and Phase 3 (Scopus email + API).
     from_email = _safe_fetch("scopus_email", lambda: email_source.fetch_articles(area, last_run))
     from_scopus = _safe_fetch("scopus_api", lambda: scopus_api.search(area, last_run))
     from_openalex = _safe_fetch("openalex", lambda: openalex.search(area, last_run))
     from_crossref = _safe_fetch("crossref", lambda: crossref.search(area, last_run))
+    console.print(
+        "  fetched: "
+        f"email={len(from_email)} scopus={len(from_scopus)} "
+        f"openalex={len(from_openalex)} crossref={len(from_crossref)}"
+    )
 
     # Enrich email-extracted DOIs via Scopus API + OpenAlex (Phase 3)
     enriched: list[Article] = []
@@ -85,17 +97,43 @@ def run_area(
     merged = deduper.dedupe(all_articles)
     for a in merged:
         a.area_slug = area.slug
-    console.print(f"  ingested={len(merged)} (pre-dedupe={len(all_articles)})")
+    console.print(f"  deduped: {len(all_articles)} -> {len(merged)}")
 
     # ── 3. Filter already-seen ─────────────────────────────────────────────
     new_articles = [a for a in merged if not (a.doi and store.is_seen(a.doi, area.slug))]
+    console.print(f"  unseen: {len(new_articles)}")
+
+    truncated = False
+    if limit is not None and len(new_articles) > limit:
+        console.print(
+            f"  [yellow]--limit {limit}: screening first {limit} of "
+            f"{len(new_articles)} unseen articles; last_run will not advance[/]"
+        )
+        new_articles = new_articles[:limit]
+        truncated = True
 
     # ── 4. Screen + 5. Summarize ───────────────────────────────────────────
     retained: list[Article] = []
     for art in new_articles:
-        art.screening = screener.screen(art, area, org_context)
+        label = art.doi or art.title or "<untitled>"
+        try:
+            art.screening = screener.screen(art, area, org_context)
+        except Exception as exc:  # one bad LLM response must not abort the run
+            console.print(f"[yellow]  screening failed for {label!r}: {exc!r} — skipping[/]")
+            continue
+        if debug:
+            console.print(
+                f"  [screen] {label[:80]!r} score={art.screening.score} "
+                f"category={art.screening.category!r}"
+            )
         if art.screening.score >= threshold:
-            art.action_points = summarizer.summarize(art, org_context)
+            try:
+                art.action_points = summarizer.summarize(art, org_context)
+            except Exception as exc:
+                console.print(f"[yellow]  summarization failed for {label!r}: {exc!r}[/]")
+            if debug:
+                n = len(art.action_points)
+                console.print(f"  [summarize] {label[:80]!r} action_points={n}")
             retained.append(art)
         if art.doi:
             store.mark_seen(art.doi, area.slug)
@@ -109,11 +147,19 @@ def run_area(
     store.finish_run(
         run_id, ingested=len(merged), retained=len(retained), dropped=dropped
     )
-    store.set_last_run(area.slug)
+    if truncated:
+        console.print("  [yellow]  truncated run — last_run left unchanged[/]")
+    else:
+        store.set_last_run(area.slug)
     return retained
 
 
-def run_all(settings: Settings | None = None, only_area: str | None = None) -> Path:
+def run_all(
+    settings: Settings | None = None,
+    only_area: str | None = None,
+    limit: int | None = None,
+    debug: bool = False,
+) -> Path:
     """Run the pipeline for every configured area and render reports.
 
     Returns the path to the generated `index.html`.
@@ -147,6 +193,7 @@ def run_all(settings: Settings | None = None, only_area: str | None = None) -> P
                 area, settings, store, threshold, org_context,
                 screener, summarizer,
                 email_source, scopus_api, openalex, crossref, deduper,
+                limit=limit, debug=debug,
             )
             renderer.render_area(area, retained, threshold)
             index_rows.append(

@@ -11,17 +11,35 @@ organisation_context.md}` and returns a structured ScreeningResult:
 
 Articles scoring below `area.threshold` are dropped by the pipeline; the rest
 flow into `summarize.py` for action-point extraction.
-
-Phase 4 will implement:
-- LiteLLM `completion()` call with `response_format` JSON schema
-- Pydantic validation of the parsed JSON
-- Retry on malformed JSON (max 2 retries, temperature 0)
 """
 
 from __future__ import annotations
 
+import json
+import re
+
+import litellm
+
 from literature_digest.config import AreaConfig, Settings
 from literature_digest.models import Article, ScreeningResult
+
+# Local models (Ollama etc.) often wrap JSON in ```fences``` or prepend
+# chain-of-thought text before the object. Pull the last top-level {...} blob
+# out of the response rather than assuming the whole content is clean JSON.
+_JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
+
+SCREEN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "category": {
+            "type": "string",
+            "enum": ["directly actionable", "monitoring", "background"],
+        },
+        "rationale": {"type": "string"},
+    },
+    "required": ["score", "category", "rationale"],
+}
 
 SCREEN_PROMPT = """\
 You are screening scientific articles for an elite-sports performance organisation.
@@ -55,33 +73,54 @@ class LLMClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def complete_json(self, prompt: str, schema: dict) -> dict:
-        """Call the configured LLM and parse the response as JSON.
+    def complete_json(self, prompt: str, schema: dict, max_retries: int = 2) -> dict:
+        """Call the configured LLM and parse the response as a JSON object.
 
-        PLACEHOLDER: returns an empty dict. Phase 4 will wire up
-        `litellm.completion(model=self.settings.lit_model, ...)`,
-        request `response_format={"type": "json_object"}`, parse the content,
-        and retry once on JSONDecodeError.
+        Retries up to `max_retries` times (temperature 0) if the response is
+        not valid JSON — local models without native JSON mode occasionally
+        wrap the object in prose or markdown fences.
         """
-        # TODO(phase-4): implement litellm.completion + JSON validation
-        _ = (prompt, schema)
-        return {}
+        _ = schema  # prompts already spell out the required keys
+        kwargs: dict = {
+            "model": self.settings.lit_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+        }
+        if self.settings.lit_api_key:
+            kwargs["api_key"] = self.settings.lit_api_key
+        if self.settings.lit_api_base:
+            kwargs["api_base"] = self.settings.lit_api_base
+
+        last_error: Exception | None = None
+        for _attempt in range(max_retries + 1):
+            try:
+                response = litellm.completion(**kwargs)
+                content = response.choices[0].message.content or ""
+                return _extract_json(content)
+            except (json.JSONDecodeError, IndexError, AttributeError, TypeError) as exc:
+                last_error = exc
+                continue
+        msg = f"LLM response was not valid JSON after retries: {last_error}"
+        raise RuntimeError(msg) from last_error
+
+
+def _extract_json(text: str) -> dict:
+    """Parse `text` as JSON, tolerating markdown fences and leading prose."""
+    match = _JSON_BLOCK.search(text)
+    candidate = match.group(0) if match else text
+    return json.loads(candidate)
 
 
 class Screener:
-    """LLM-powered relevancy screener. Placeholder body."""
+    """LLM-powered relevancy screener."""
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
 
     def screen(self, article: Article, area: AreaConfig, org_context: str) -> ScreeningResult:
-        """Return a ScreeningResult for `article`.
-
-        PLACEHOLDER: returns a neutral "monitoring" result at the threshold so
-        the pipeline can be exercised end-to-end without an API call. Phase 4
-        will replace this with a real LLM call.
-        """
-        _ = self.client.complete_json(
+        """Return a ScreeningResult for `article`."""
+        data = self.client.complete_json(
             SCREEN_PROMPT.format(
                 org_context=org_context,
                 area_name=area.name,
@@ -89,10 +128,6 @@ class Screener:
                 title=article.title or "",
                 abstract=article.abstract or "",
             ),
-            schema={},  # TODO(phase-4): real JSON schema
+            schema=SCREEN_SCHEMA,
         )
-        return ScreeningResult(
-            score=area.threshold if area.threshold else 60,
-            category="monitoring",
-            rationale="PLACEHOLDER: real screening not yet implemented.",
-        )
+        return ScreeningResult.model_validate(data)

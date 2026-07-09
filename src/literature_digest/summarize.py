@@ -7,11 +7,6 @@ For each article that passed screening, calls LiteLLM with the title, abstract,
 screening rationale, and organisation context. Returns 1-3 short action points
 written as imperatives for a coach or sports scientist, each tagged with the
 same category taxonomy as screening.
-
-Phase 4 will implement:
-- LiteLLM `completion()` call reusing `LLMClient.complete_json`
-- Pydantic validation of each action point
-- Cap at 3 points; drop trivial duplicates
 """
 
 from __future__ import annotations
@@ -34,34 +29,58 @@ Return 1-3 action points as JSON: {{"action_points": [{{"text": "...",
 Each `text` should be one imperative sentence aimed at a coach or sports
 scientist (e.g. "Trial X with Y population for Z weeks before adopting.")."""
 
+SUMMARIZE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "action_points": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "category": {
+                        "type": "string",
+                        "enum": ["directly actionable", "monitoring", "background"],
+                    },
+                },
+                "required": ["text", "category"],
+            },
+        },
+    },
+    "required": ["action_points"],
+}
+
 
 class Summarizer:
-    """LLM-powered action-point extractor. Placeholder body."""
+    """LLM-powered action-point extractor."""
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
 
     def summarize(self, article: Article, org_context: str) -> list[ActionPoint]:
-        """Return 1-3 ActionPoints for `article`.
-
-        PLACEHOLDER: returns a single placeholder point so the pipeline renders
-        something end-to-end. Phase 4 will replace with a real LLM call.
-        """
+        """Return up to 3 deduplicated ActionPoints for `article`."""
         rationale = (
             article.screening.rationale if article.screening else "No screening yet."
         )
-        _ = self.client.complete_json(
+        data = self.client.complete_json(
             SUMMARIZE_PROMPT.format(
                 org_context=org_context,
                 title=article.title or "",
                 abstract=article.abstract or "",
                 rationale=rationale,
             ),
-            schema={},  # TODO(phase-4): real JSON schema
+            schema=SUMMARIZE_SCHEMA,
         )
-        return [
-            ActionPoint(
-                text="PLACEHOLDER: real action-point extraction not yet implemented.",
-                category="monitoring",
-            )
-        ]
+        points = [ActionPoint.model_validate(p) for p in data.get("action_points", [])]
+
+        deduped: list[ActionPoint] = []
+        seen_texts: set[str] = set()
+        for point in points:
+            key = point.text.strip().lower()
+            if not key or key in seen_texts:
+                continue
+            seen_texts.add(key)
+            deduped.append(point)
+        return deduped[:3]

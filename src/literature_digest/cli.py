@@ -1,10 +1,13 @@
 """CLI entrypoint: `literature-digest <subcommand>`.
 
 Subcommands:
-    run [--area <slug>]   Run the pipeline (all areas or just one)
+    run [--area <slug>] [--limit N] [--debug]   Run the pipeline (all areas or
+                                                 just one; --limit caps articles
+                                                 screened, for dry runs against
+                                                 a local LLM)
     list-areas            Print configured areas and exit
     test-imap             IMAP connection sanity check (Phase 3)
-    test-llm              LLM credentials sanity check (Phase 4)
+    test-llm              LLM credentials sanity check
     render                Re-render reports from the last run without re-fetching
 
 Uses stdlib argparse + rich for output (no extra deps beyond what's already declared).
@@ -21,6 +24,7 @@ from rich.table import Table
 
 from literature_digest.config import Settings, load_areas
 from literature_digest.pipeline import run_all
+from literature_digest.screen import LLMClient
 
 console = Console()
 
@@ -46,7 +50,7 @@ def cmd_list_areas(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    index_path = run_all(only_area=args.area)
+    index_path = run_all(only_area=args.area, limit=args.limit, debug=args.debug)
     if args.open:
         webbrowser.open(f"file://{index_path.resolve()}")
     return 0
@@ -58,7 +62,19 @@ def cmd_test_imap(args: argparse.Namespace) -> int:
 
 
 def cmd_test_llm(args: argparse.Namespace) -> int:
-    console.print("[yellow]PLACEHOLDER[/] test-llm not implemented until Phase 4.")
+    settings = Settings()
+    base_note = f"  api_base=[cyan]{settings.lit_api_base}[/]" if settings.lit_api_base else ""
+    console.print(f"Model: [cyan]{settings.lit_model}[/]{base_note}")
+    client = LLMClient(settings)
+    try:
+        data = client.complete_json(
+            'Reply with JSON only: {"ok": true, "note": "<one short sentence>"}',
+            schema={"type": "object", "properties": {"ok": {"type": "boolean"}}},
+        )
+    except Exception as exc:
+        console.print(f"[bold red]FAILED[/] {exc!r}")
+        return 1
+    console.print(f"[bold green]OK[/] {data}")
     return 0
 
 
@@ -77,6 +93,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="Run the pipeline (all areas or just --area).")
     p_run.add_argument("--area", help="Only run this area slug.")
     p_run.add_argument("--open", action="store_true", help="Open the index in a browser when done.")
+    p_run.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Cap the number of new articles screened/summarized per area (for dry runs).",
+    )
+    p_run.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print per-article screening/summarization results as they happen.",
+    )
     p_run.set_defaults(func=cmd_run)
 
     p_list = sub.add_parser("list-areas", help="Print configured research areas.")
@@ -95,6 +122,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Long runs are often piped to a file/background task; without this,
+    # Python block-buffers non-TTY stdout and progress only appears at exit.
+    sys.stdout.reconfigure(line_buffering=True)
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
