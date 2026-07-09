@@ -1,6 +1,6 @@
 # Research areas tracked by the literature-digest pipeline.
-# Add a new area by copying the structure below. Each area becomes one HTML
-# report under data/reports/areas/<slug>.html and a row on the index page.
+# Areas are auto-discovered from data/search_terms/<slug>/*.txt.  This file
+# only stores thin metadata keyed by folder slug.
 
 defaults:
   # Default LLM relevancy cutoff (0-100). Override per area with `threshold`.
@@ -10,27 +10,7 @@ defaults:
   lookback_days: 17
 
 areas:
-  - slug: sports-nutrition
-    name: Sports Nutrition
-    keywords:
-      - "sports nutrition"
-      - "carbohydrate periodization"
-      - "ergogenic aid"
-      - "fueling for endurance"
-      - "protein timing athlete"
-    # The exact query string registered as a Scopus alert, so the free-API
-    # queries stay in sync with what Scopus is searching for.
-    scopus_query: 'TITLE-ABS-KEY("sports nutrition" OR "ergogenic aid" OR "carbohydrate periodization")'
-    # Optional per-area override of the default threshold.
-    threshold: 65
-
-  - slug: recovery-and-sleep
-    name: Recovery & Sleep
-    keywords:
-      - "athlete recovery"
-      - "sleep extension"
-      - "heart rate variability training"
-      - "cold water immersion recovery"
-      - "load monitoring athlete"
-    scopus_query: 'TITLE-ABS-KEY("athlete recovery" OR "sleep extension" OR "HRV training")'
-    # Inherits default threshold (60).
+  - slug: data_science
+    name: Data Science
+    threshold: 55
+  # nutrition / performance added when they get .txt queries
