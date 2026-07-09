@@ -1,0 +1,96 @@
+[
+  {
+    "doi": "10.9999/fake.data_science.tracking_data.1",
+    "title": "Validating multi-camera tracking against match outcomes in elite football",
+    "abstract": "We analysed a full competitive season of first-team matches to test whether multi-camera tracking derived from pitch-control surface predicts match outcomes. Using data from an elite men's league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.",
+    "authors": [
+      "Tanaka, H.",
+      "Tanaka, E.",
+      "Novak, C."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2024,
+    "pub_date": "2024-12-11T00:00:00Z",
+    "matched_terms": [
+      "tracking_data"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.tracking_data.2",
+    "title": "A practitioner workflow for player tracking streams using high-speed running distance",
+    "abstract": "This applied study describes and evaluates a workflow that turns raw high-speed running distance into coach-facing player tracking streams summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.",
+    "authors": [
+      "Mbeki, D.",
+      "Ubeda, F.",
+      "Oyelaran, L.",
+      "Ubeda, A."
+    ],
+    "journal": "European Journal of Sport Science",
+    "year": 2024,
+    "pub_date": "2024-05-21T00:00:00Z",
+    "matched_terms": [
+      "tracking_data"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.tracking_data.3",
+    "title": "A graph-neural approach to modelling optical tracking data from synchronised movement",
+    "abstract": "We propose a graph-neural architecture that learns optical tracking data representations from synchronised movement. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.",
+    "authors": [
+      "Rasmussen, D.",
+      "Ubeda, I."
+    ],
+    "journal": "European Journal of Sport Science",
+    "year": 2025,
+    "pub_date": "2025-06-21T00:00:00Z",
+    "matched_terms": [
+      "tracking_data"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.tracking_data.4",
+    "title": "Sensitivity of GPS-derived positional data estimates to off-ball run detection sampling frequency",
+    "abstract": "This methodological paper quantifies how GPS-derived positional data estimates vary with the sampling frequency of off-ball run detection. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.",
+    "authors": [
+      "Xu, D.",
+      "Petrov, I.",
+      "Tanaka, F."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2024,
+    "pub_date": "2024-01-26T00:00:00Z",
+    "matched_terms": [
+      "tracking_data"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.tracking_data.5",
+    "title": "player tracking streams in recreational five-a-side players: an exploratory study",
+    "abstract": "We explored player tracking streams using high-speed running distance in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.",
+    "authors": [
+      "Xu, J.",
+      "Rasmussen, H."
+    ],
+    "journal": "Journal of Sports Sciences",
+    "year": 2025,
+    "pub_date": "2025-06-03T00:00:00Z",
+    "matched_terms": [
+      "tracking_data"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  }
+]

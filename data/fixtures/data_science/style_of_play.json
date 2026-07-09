@@ -1,0 +1,99 @@
+[
+  {
+    "doi": "10.9999/fake.data_science.style_of_play.1",
+    "title": "Validating tactical identity against match outcomes in elite football",
+    "abstract": "We analysed a full competitive season of first-team matches to test whether tactical identity derived from pressing intensity (PPDA) predicts match outcomes. Using data from an elite men's league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.",
+    "authors": [
+      "Wojcik, G.",
+      "Petrov, C.",
+      "Novak, C."
+    ],
+    "journal": "International Journal of Performance Analysis in Sport",
+    "year": 2025,
+    "pub_date": "2025-04-22T00:00:00Z",
+    "matched_terms": [
+      "style_of_play"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.style_of_play.2",
+    "title": "A practitioner workflow for playing-style fingerprint using passing network centrality",
+    "abstract": "This applied study describes and evaluates a workflow that turns raw passing network centrality into coach-facing playing-style fingerprint summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.",
+    "authors": [
+      "Oyelaran, E.",
+      "Quintero, A.",
+      "Oyelaran, G.",
+      "Ubeda, F."
+    ],
+    "journal": "European Journal of Sport Science",
+    "year": 2025,
+    "pub_date": "2025-10-11T00:00:00Z",
+    "matched_terms": [
+      "style_of_play"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.style_of_play.3",
+    "title": "A graph-neural approach to modelling playing-style fingerprint from passing network centrality",
+    "abstract": "We propose a graph-neural architecture that learns playing-style fingerprint representations from passing network centrality. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.",
+    "authors": [
+      "Ubeda, G.",
+      "Sundqvist, G.",
+      "Sundqvist, B.",
+      "Tanaka, K."
+    ],
+    "journal": "Frontiers in Sports Modelling",
+    "year": 2025,
+    "pub_date": "2025-01-07T00:00:00Z",
+    "matched_terms": [
+      "style_of_play"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.style_of_play.4",
+    "title": "Sensitivity of style of play estimates to vertical progression ratio sampling frequency",
+    "abstract": "This methodological paper quantifies how style of play estimates vary with the sampling frequency of vertical progression ratio. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.",
+    "authors": [
+      "Novak, F.",
+      "Virtanen, A."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2025,
+    "pub_date": "2025-01-19T00:00:00Z",
+    "matched_terms": [
+      "style_of_play"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.style_of_play.5",
+    "title": "playing-style fingerprint in recreational five-a-side players: an exploratory study",
+    "abstract": "We explored playing-style fingerprint using passing network centrality in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.",
+    "authors": [
+      "Mbeki, B.",
+      "Petrov, J.",
+      "Sundqvist, C.",
+      "Wojcik, E."
+    ],
+    "journal": "Journal of Sports Sciences",
+    "year": 2025,
+    "pub_date": "2025-10-12T00:00:00Z",
+    "matched_terms": [
+      "style_of_play"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  }
+]
