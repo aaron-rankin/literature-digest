@@ -50,7 +50,9 @@ def cmd_list_areas(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    index_path = run_all(only_area=args.area, limit=args.limit, debug=args.debug)
+    index_path = run_all(
+        only_area=args.area, limit=args.limit, debug=args.debug, local=args.local
+    )
     if args.open:
         webbrowser.open(f"file://{index_path.resolve()}")
     return 0
@@ -103,6 +105,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--debug",
         action="store_true",
         help="Print per-article screening/summarization results as they happen.",
+    )
+    p_run.add_argument(
+        "--local",
+        action="store_true",
+        help="Run fully offline from data/fixtures/<area>/ (no Scopus/OpenAlex/"
+        "Crossref calls); writes to state.local.db and re-processes every run.",
     )
     p_run.set_defaults(func=cmd_run)
 
