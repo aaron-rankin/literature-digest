@@ -8,8 +8,10 @@ changing the orchestrator's shape.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
+import httpx
 from rich.console import Console
 
 from literature_digest.config import AreaConfig, Settings, load_areas, load_org_context
@@ -27,6 +29,19 @@ from literature_digest.store import Store
 from literature_digest.summarize import Summarizer
 
 console = Console()
+
+
+def _safe_fetch(label: str, fn: Callable[[], list[Article]]) -> list[Article]:
+    """Run one source fetch, downgrading network failures to an empty result.
+
+    A single free API rate-limiting (HTTP 429) or being briefly unavailable must
+    not abort the whole area run — we log it and let the other sources proceed.
+    """
+    try:
+        return fn()
+    except httpx.HTTPError as exc:
+        console.print(f"[yellow]  {label} unavailable: {exc!r} — skipping[/]")
+        return []
 
 
 def run_area(
@@ -51,10 +66,10 @@ def run_area(
     # ── 1. Fetch from all sources ──────────────────────────────────────────
     # Sources are placeholders for now; they return [] or None. Real fetching
     # lands in Phase 2 (free APIs) and Phase 3 (Scopus email + API).
-    from_email = email_source.fetch_articles(area, last_run)
-    from_scopus = scopus_api.search(area, last_run)
-    from_openalex = openalex.search(area, last_run)
-    from_crossref = crossref.search(area, last_run)
+    from_email = _safe_fetch("scopus_email", lambda: email_source.fetch_articles(area, last_run))
+    from_scopus = _safe_fetch("scopus_api", lambda: scopus_api.search(area, last_run))
+    from_openalex = _safe_fetch("openalex", lambda: openalex.search(area, last_run))
+    from_crossref = _safe_fetch("crossref", lambda: crossref.search(area, last_run))
 
     # Enrich email-extracted DOIs via Scopus API + OpenAlex (Phase 3)
     enriched: list[Article] = []

@@ -46,7 +46,7 @@ class Article(BaseModel):
     # Provenance
     sources: list[str] = Field(
         default_factory=list,
-        description="Which ingestion sources contributed metadata (e.g. ['scopus_email','openalex'])",
+        description="Ingestion sources contributing metadata (e.g. ['scopus_email','openalex'])",
     )
 
     # LLM-stage outputs (None until populated)
