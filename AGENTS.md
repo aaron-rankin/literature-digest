@@ -15,8 +15,9 @@ Use `uv run …`:
 
 | Task | Command |
 |------|---------|
-| Run the pipeline | `uv run literature-digest run` |
-| Run one area / dry run | `uv run literature-digest run --area data_science --limit 5` |
+| Run the pipeline (local fixtures — preferred) | `uv run literature-digest run --local --area data_science` |
+| Run one area / dry run (local fixtures — preferred) | `uv run literature-digest run --local --area data_science --limit 5` |
+| Run against live APIs | `uv run literature-digest run --area data_science --limit 5` |
 | List areas | `uv run literature-digest list-areas` |
 | LLM sanity check | `uv run literature-digest test-llm` |
 | Tests | `uv run pytest` |
@@ -28,6 +29,28 @@ Use `uv run …`:
 - Manage dependencies with `uv add` / `uv remove` — never `pip install`.
 - If a command fails because a package is missing, `uv sync` first; never fall
   back to the system Python.
+
+## Prefer local runs for development and debugging
+
+The pipeline can run fully offline against committed fixtures in
+`data/fixtures/<area>/`. This avoids Scopus / OpenAlex / Crossref quota, skips
+flaky network calls, and is much faster. **Default to `--local` unless the task
+specifically requires exercising real APIs.**
+
+- `uv run literature-digest run --local --area data_science --limit 5`
+- Add `--fast` to use a small local Ollama model and avoid paid LLM calls:
+  `uv run literature-digest run --local --fast --area data_science --limit 5`
+- Use `--debug` with local runs to see per-article screening/summarization
+  progress without burning tokens.
+
+Only use live API runs when you are:
+- implementing or verifying a source client (Scopus, OpenAlex, Crossref),
+- testing real query translation against the actual APIs,
+- configuring external API credentials, or
+- explicitly validating end-to-end behaviour against live data.
+
+For everything else — UI/report iteration, screening/summarization tuning,
+regression checks, or reproducing a bug — use `--local`.
 
 ## Implementing a task — always on a new branch
 
