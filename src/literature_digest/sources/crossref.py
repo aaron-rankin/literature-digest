@@ -1,14 +1,14 @@
 """Crossref API client (free, polite pool via mailto).
 
 Contract:
-    search(area: AreaConfig, since: datetime | None) -> list[Article]
+    search(area: LoadedArea, since: datetime | None) -> list[Article]
     enrich(doi: str) -> Article | None
 
 Uses `https://api.crossref.org/works` with a polite-pool `User-Agent` (and
-`mailto` param) to get better rate limits. Keyword search uses Crossref's
-free-text `query` with a `from-pub-date` filter; results are deep-paged via the
-`cursor` mechanism. Abstracts, when present, arrive as JATS XML and are stripped
-to plain text.
+`mailto` param) to get better rate limits. Searches each parsed term
+independently (free-text `query`) with a `from-pub-date` filter; results are
+deep-paged via the `cursor` mechanism and deduplicated by DOI. Abstracts, when
+present, arrive as JATS XML and are stripped to plain text.
 """
 
 from __future__ import annotations
@@ -19,8 +19,9 @@ from typing import Any
 
 import httpx
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import LoadedArea, Settings
 from literature_digest.models import Article
+from literature_digest.query import UnsupportedScopusSyntax, parse
 from literature_digest.sources.dedupe import normalize_doi
 
 _SOURCE = "crossref"
@@ -39,10 +40,31 @@ class CrossrefSource:
         self.settings = settings
 
     # ── public API ─────────────────────────────────────────────────────────
-    def search(self, area: AreaConfig, since: datetime | None) -> list[Article]:
-        """Search Crossref for `area.keywords` published since `since`."""
+    def search(self, area: LoadedArea, since: datetime | None) -> list[Article]:
+        """Search Crossref for each term in `area` and deduplicate by DOI."""
+        seen: set[str] = set()
+        articles: list[Article] = []
+        for term in area.terms:
+            parsed = term.parsed
+            if parsed is None:
+                try:
+                    parsed = parse(term.raw_query, term_name=term.name)
+                except UnsupportedScopusSyntax:
+                    continue
+            if not parsed.terms:
+                continue
+            for art in self._search_keywords(parsed.terms, since):
+                if art.doi and art.doi in seen:
+                    continue
+                if art.doi:
+                    seen.add(art.doi)
+                articles.append(art)
+        return articles
+
+    def _search_keywords(self, keywords: list[str], since: datetime | None) -> list[Article]:
+        """Search Crossref for one keyword list published since `since`."""
         params: dict[str, Any] = {
-            "query": " ".join(area.keywords),
+            "query": " ".join(keywords),
             "rows": _ROWS,
             "cursor": "*",
         }

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import LoadedArea, Settings
 from literature_digest.models import Article
 
 
@@ -18,5 +18,5 @@ class ScopusEmailSource:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def fetch_articles(self, area: AreaConfig, since: datetime | None) -> list[Article]:
+    def fetch_articles(self, area: LoadedArea, since: datetime | None) -> list[Article]:
         return []

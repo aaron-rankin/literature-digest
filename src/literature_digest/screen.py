@@ -20,7 +20,7 @@ import re
 
 import litellm
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import LoadedArea, Settings
 from literature_digest.models import Article, ScreeningResult
 
 # Local models (Ollama etc.) often wrap JSON in ```fences``` or prepend
@@ -118,7 +118,7 @@ class Screener:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
 
-    def screen(self, article: Article, area: AreaConfig, org_context: str) -> ScreeningResult:
+    def screen(self, article: Article, area: LoadedArea, org_context: str) -> ScreeningResult:
         """Return a ScreeningResult for `article`."""
         data = self.client.complete_json(
             SCREEN_PROMPT.format(

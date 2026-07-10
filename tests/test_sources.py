@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import httpx
 import pytest
 import respx
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import AreaConfig, LoadedArea, SearchTerm, Settings
 from literature_digest.sources.crossref import CrossrefSource
 from literature_digest.sources.openalex import OpenAlexSource
 
@@ -19,12 +20,20 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def area() -> AreaConfig:
-    return AreaConfig(
-        slug="sports-nutrition",
-        name="Sports Nutrition",
-        keywords=["sports nutrition", "ergogenic aid"],
-        scopus_query="TITLE-ABS-KEY(...)",
+def area() -> LoadedArea:
+    return LoadedArea(
+        config=AreaConfig(
+            slug="sports-nutrition",
+            name="Sports Nutrition",
+            threshold=50,
+        ),
+        terms=[
+            SearchTerm(
+                name="sports-nutrition",
+                raw_query='TITLE-ABS-KEY("sports nutrition") OR TITLE-ABS-KEY("ergogenic aid")',
+                path=Path("/tmp/sports-nutrition.txt"),
+            ),
+        ],
     )
 
 
@@ -77,10 +86,18 @@ def test_openalex_search_parses_and_reconstructs_abstract(
     assert "from_publication_date%3A2024-01-01" in str(request.url)
 
 
+def _oa_work2() -> dict:
+    work = _oa_work()
+    work["id"] = "https://openalex.org/W2"
+    work["doi"] = "https://doi.org/10.1/OA2"
+    work["display_name"] = "Second page work"
+    return work
+
+
 @respx.mock
 def test_openalex_search_follows_cursor_pagination(settings: Settings, area: AreaConfig) -> None:
     page1 = {"results": [_oa_work()], "meta": {"next_cursor": "CURSOR2"}}
-    page2 = {"results": [_oa_work()], "meta": {"next_cursor": None}}
+    page2 = {"results": [_oa_work2()], "meta": {"next_cursor": None}}
     respx.get("https://api.openalex.org/works").mock(
         side_effect=[httpx.Response(200, json=page1), httpx.Response(200, json=page2)]
     )
@@ -88,6 +105,7 @@ def test_openalex_search_follows_cursor_pagination(settings: Settings, area: Are
     articles = OpenAlexSource(settings).search(area, since=None)
 
     assert len(articles) == 2
+    assert {a.doi for a in articles} == {"10.1/oa", "10.1/oa2"}
 
 
 @respx.mock
