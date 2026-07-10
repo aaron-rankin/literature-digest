@@ -1,8 +1,8 @@
 # Tasks
 
 ## Paper Finding
-[] - link up new search terms: `/data/search_terms`
-[] - link up Scopus API: key is in `.env`
+[x] - link up new search terms: `/data/search_terms` (subtask 01 — merged to main)
+[] - link up Scopus API: key is in `.env` (subtasks 03–04)
 
 --- 
 
@@ -16,10 +16,10 @@
 
 --- 
 ## Pipeline
-[] - containerising the whole thing
-[] - Making sure it is robust
-[] - cleaning up repo
-[] - updating documentation and pipeline diagrams
+[] - containerising the whole thing (subtask 10 — deferred)
+[] - Making sure it is robust (subtask 09)
+[x] - cleaning up repo — stale example areas/reports removed (subtasks 01/09)
+[] - updating documentation and pipeline diagrams (subtask 09)
 [] - learning each component
 
 
