@@ -48,6 +48,10 @@ class Article(BaseModel):
         default_factory=list,
         description="Ingestion sources contributing metadata (e.g. ['scopus_email','openalex'])",
     )
+    matched_terms: list[str] = Field(
+        default_factory=list,
+        description="Search-term names that surfaced this article",
+    )
 
     # LLM-stage outputs (None until populated)
     screening: ScreeningResult | None = None

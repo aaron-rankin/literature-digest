@@ -1,14 +1,14 @@
 """Crossref API client (free, polite pool via mailto).
 
 Contract:
-    search(area: LoadedArea, since: datetime | None) -> list[Article]
+    search(source_query: SourceQuery, window: DateWindow) -> list[Article]
     enrich(doi: str) -> Article | None
 
-Uses `https://api.crossref.org/works` with a polite-pool `User-Agent` (and
-`mailto` param) to get better rate limits. Searches each parsed term
-independently (free-text `query`) with a `from-pub-date` filter; results are
-deep-paged via the `cursor` mechanism and deduplicated by DOI. Abstracts, when
-present, arrive as JATS XML and are stripped to plain text.
+Uses ``https://api.crossref.org/works`` with a polite-pool ``User-Agent`` (and
+``mailto`` param). The pipeline calls this once per search term; we free-text the
+content terms and rely on date filters plus downstream screening. The crawl
+window maps to ``from-index-date`` / ``until-index-date`` and ``PUBYEAR`` maps to
+``from-pub-date`` / ``until-pub-date``.
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ from typing import Any
 
 import httpx
 
-from literature_digest.config import LoadedArea, Settings
+from literature_digest.config import Settings
 from literature_digest.models import Article
-from literature_digest.query import UnsupportedScopusSyntax, parse
+from literature_digest.query import DateWindow, QueryTranslator, SourceQuery
 from literature_digest.sources.dedupe import normalize_doi
 
 _SOURCE = "crossref"
@@ -38,50 +38,16 @@ class CrossrefSource:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._translator = QueryTranslator()
 
     # ── public API ─────────────────────────────────────────────────────────
-    def search(self, area: LoadedArea, since: datetime | None) -> list[Article]:
-        """Search Crossref for each term in `area` and deduplicate by DOI."""
-        seen: set[str] = set()
-        articles: list[Article] = []
-        for term in area.terms:
-            parsed = term.parsed
-            if parsed is None:
-                try:
-                    parsed = parse(term.raw_query, term_name=term.name)
-                except UnsupportedScopusSyntax:
-                    continue
-            if not parsed.terms:
-                continue
-            for art in self._search_keywords(parsed.terms, since):
-                if art.doi and art.doi in seen:
-                    continue
-                if art.doi:
-                    seen.add(art.doi)
-                articles.append(art)
-        return articles
-
-    def _search_keywords(self, keywords: list[str], since: datetime | None) -> list[Article]:
-        """Search Crossref for one keyword list published since `since`."""
-        params: dict[str, Any] = {
-            "query": " ".join(keywords),
-            "rows": _ROWS,
-            "cursor": "*",
-        }
-        if since is not None:
-            params["filter"] = f"from-pub-date:{since.date().isoformat()}"
+    def search(self, source_query: SourceQuery, window: DateWindow) -> list[Article]:
+        """Search Crossref for a single term and return parsed articles."""
+        params = self._translator.to_crossref(source_query, window)
         self._add_mailto(params)
-
-        articles: list[Article] = []
-        with httpx.Client(timeout=_TIMEOUT, headers=self._headers()) as client:
-            while True:
-                message = self._get(client, self.BASE_URL, params).get("message", {})
-                items = message.get("items", [])
-                articles.extend(_parse_item(it) for it in items)
-                next_cursor = message.get("next-cursor")
-                if not items or not next_cursor:
-                    break
-                params["cursor"] = next_cursor
+        articles = self._search_params(params)
+        for art in articles:
+            art.matched_terms = [source_query.term_name]
         return articles
 
     def enrich(self, doi: str) -> Article | None:
@@ -99,11 +65,21 @@ class CrossrefSource:
             return _parse_item(resp.json().get("message", {}))
 
     # ── helpers ────────────────────────────────────────────────────────────
-    @staticmethod
-    def _get(client: httpx.Client, url: str, params: dict[str, Any]) -> dict[str, Any]:
-        resp = client.get(url, params=params)
-        resp.raise_for_status()
-        return resp.json()
+    def _search_params(self, params: dict[str, Any]) -> list[Article]:
+        """Paginate through a Crossref params dict."""
+        articles: list[Article] = []
+        with httpx.Client(timeout=_TIMEOUT, headers=self._headers()) as client:
+            while True:
+                resp = client.get(self.BASE_URL, params=params)
+                resp.raise_for_status()
+                message = resp.json().get("message", {})
+                items = message.get("items", [])
+                articles.extend(_parse_item(it) for it in items)
+                next_cursor = message.get("next-cursor")
+                if not items or not next_cursor:
+                    break
+                params["cursor"] = next_cursor
+        return articles
 
     def _add_mailto(self, params: dict[str, Any]) -> None:
         if self.settings.contact_email:
@@ -128,7 +104,7 @@ def _first(seq: list[Any] | None) -> Any | None:
 
 
 def _parse_item(item: dict[str, Any]) -> Article:
-    """Map a Crossref `message` item onto our Article model."""
+    """Map a Crossref ``message`` item onto our Article model."""
     authors = [
         name
         for a in item.get("author", [])
@@ -152,7 +128,7 @@ def _parse_item(item: dict[str, Any]) -> Article:
 
 
 def _parse_pub_date(parts: list[int]) -> datetime | None:
-    """Build a datetime from Crossref `date-parts` (year[, month[, day]])."""
+    """Build a datetime from Crossref ``date-parts`` (year[, month[, day]])."""
     if not parts:
         return None
     year = parts[0]

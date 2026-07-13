@@ -70,8 +70,16 @@ class LLMClient:
     is a single env-var change (`LIT_MODEL`), not an edit in every consumer.
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        model: str | None = None,
+        api_base: str | None = None,
+    ) -> None:
         self.settings = settings
+        self.model = model or settings.lit_model
+        self.api_base = api_base or settings.lit_api_base
 
     def complete_json(self, prompt: str, schema: dict, max_retries: int = 2) -> dict:
         """Call the configured LLM and parse the response as a JSON object.
@@ -82,15 +90,15 @@ class LLMClient:
         """
         _ = schema  # prompts already spell out the required keys
         kwargs: dict = {
-            "model": self.settings.lit_model,
+            "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0,
             "response_format": {"type": "json_object"},
         }
         if self.settings.lit_api_key:
             kwargs["api_key"] = self.settings.lit_api_key
-        if self.settings.lit_api_base:
-            kwargs["api_base"] = self.settings.lit_api_base
+        if self.api_base:
+            kwargs["api_base"] = self.api_base
 
         last_error: Exception | None = None
         for _attempt in range(max_retries + 1):

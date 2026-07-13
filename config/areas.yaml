@@ -8,6 +8,9 @@ defaults:
   # How far back to look when polling free APIs (days). Matches the 2-week cadence
   # plus a small overlap window so late-indexed articles are not missed.
   lookback_days: 17
+  # First-ever run window (days). Prevents an unbounded backfill when no
+  # last_run cursor exists yet.
+  first_run_lookback_days: 90
 
 areas:
   - slug: data_science

@@ -18,13 +18,20 @@ from __future__ import annotations
 import argparse
 import sys
 import webbrowser
+from datetime import UTC, datetime, timedelta
 
 from rich.console import Console
 from rich.table import Table
 
-from literature_digest.config import Settings, discover_areas
+from literature_digest.config import Settings, discover_areas, load_areas
 from literature_digest.pipeline import run_all
+from literature_digest.query import (
+    QueryTranslator,
+    SourceQuery,
+    compute_date_window,
+)
 from literature_digest.screen import LLMClient
+from literature_digest.sources import ScopusApiSource
 
 console = Console()
 
@@ -51,7 +58,11 @@ def cmd_list_areas(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     index_path = run_all(
-        only_area=args.area, limit=args.limit, debug=args.debug, local=args.local
+        only_area=args.area,
+        limit=args.limit,
+        debug=args.debug,
+        local=args.local,
+        fast=args.fast,
     )
     if args.open:
         webbrowser.open(f"file://{index_path.resolve()}")
@@ -65,9 +76,14 @@ def cmd_test_imap(args: argparse.Namespace) -> int:
 
 def cmd_test_llm(args: argparse.Namespace) -> int:
     settings = Settings()
-    base_note = f"  api_base=[cyan]{settings.lit_api_base}[/]" if settings.lit_api_base else ""
-    console.print(f"Model: [cyan]{settings.lit_model}[/]{base_note}")
-    client = LLMClient(settings)
+    model = settings.lit_model
+    base = settings.lit_api_base
+    if args.fast:
+        model = settings.lit_fast_model
+        base = settings.lit_fast_api_base or base
+    base_note = f"  api_base=[cyan]{base}[/]" if base else ""
+    console.print(f"Model: [cyan]{model}[/]{base_note}")
+    client = LLMClient(settings, model=model, api_base=base)
     try:
         data = client.complete_json(
             'Reply with JSON only: {"ok": true, "note": "<one short sentence>"}',
@@ -77,6 +93,51 @@ def cmd_test_llm(args: argparse.Namespace) -> int:
         console.print(f"[bold red]FAILED[/] {exc!r}")
         return 1
     console.print(f"[bold green]OK[/] {data}")
+    return 0
+
+
+def cmd_test_scopus(args: argparse.Namespace) -> int:
+    settings = Settings()
+    if not settings.scopus_api_key:
+        console.print("[bold red]FAILED[/] SCOPUS_API_KEY is not set in .env")
+        return 1
+
+    # Use the first enabled area's first search term for a cheap smoke test.
+    areas = discover_areas(settings)
+    if not areas:
+        console.print("[bold red]FAILED[/] no enabled areas with search terms found")
+        return 1
+    area = areas[0]
+    if not area.terms:
+        console.print(f"[bold red]FAILED[/] area {area.slug!r} has no search terms")
+        return 1
+    term = area.terms[0]
+
+    areas_file = load_areas(settings.areas_config)
+    window = compute_date_window(
+        last_run=None,
+        lookback_days=areas_file.lookback_days(),
+        first_run_lookback_days=areas_file.first_run_lookback_days(),
+        pubyear_from=term.parsed.pubyear_from,
+        pubyear_to=term.parsed.pubyear_to,
+        now=datetime.now(UTC) - timedelta(days=1),  # small offset so BEF is in the past
+    )
+    sq = SourceQuery(term_name=term.name, parsed=term.parsed, area_slug=area.slug)
+    query = QueryTranslator().to_scopus(sq, window)
+    console.print(f"Area: [cyan]{area.slug}[/] | Term: [cyan]{term.name}[/]")
+    console.print(f"Query: [dim]{query}[/]")
+
+    source = ScopusApiSource(settings)
+    try:
+        results = source.search(sq, window)
+    except Exception as exc:
+        console.print(f"[bold red]FAILED[/] {exc!r}")
+        return 1
+
+    console.print(f"[bold green]OK[/] found {len(results)} result(s)")
+    if results:
+        first = results[0]
+        console.print(f"  first: {first.title!r} ({first.year})")
     return 0
 
 
@@ -112,6 +173,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run fully offline from data/fixtures/<area>/ (no Scopus/OpenAlex/"
         "Crossref calls); writes to state.local.db and re-processes every run.",
     )
+    p_run.add_argument(
+        "--fast",
+        action="store_true",
+        help="Use the configured fast/local LLM and write to state.test.db "
+        "(prod scores are never touched).",
+    )
     p_run.set_defaults(func=cmd_run)
 
     p_list = sub.add_parser("list-areas", help="Print configured research areas.")
@@ -121,7 +188,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_imap.set_defaults(func=cmd_test_imap)
 
     p_llm = sub.add_parser("test-llm", help="LLM credentials sanity check.")
+    p_llm.add_argument(
+        "--fast",
+        action="store_true",
+        help="Test the configured fast/local model instead of the default model.",
+    )
     p_llm.set_defaults(func=cmd_test_llm)
+
+    p_scopus = sub.add_parser("test-scopus", help="Scopus API sanity check.")
+    p_scopus.set_defaults(func=cmd_test_scopus)
 
     p_render = sub.add_parser("render", help="Re-render reports from the last run.")
     p_render.set_defaults(func=cmd_render)

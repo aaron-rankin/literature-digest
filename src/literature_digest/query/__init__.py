@@ -12,14 +12,24 @@ from literature_digest.query.scopus_parser import (
     UnsupportedScopusSyntax,
     parse,
 )
+from literature_digest.query.translate import (
+    DateWindow,
+    QueryTranslator,
+    SourceQuery,
+    compute_date_window,
+)
 
 __all__ = [
     "And",
     "DateFilter",
+    "DateWindow",
     "Field",
     "Node",
     "Or",
     "ParsedQuery",
+    "QueryTranslator",
+    "SourceQuery",
     "UnsupportedScopusSyntax",
+    "compute_date_window",
     "parse",
 ]

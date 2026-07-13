@@ -67,3 +67,23 @@ def test_dedupe_keeps_doiless_articles_and_order() -> None:
     assert [x.title for x in out] == ["A", "No DOI"]
     assert out[0].sources == ["openalex", "crossref"]
     assert out[1].doi is None
+
+
+def test_dedupe_unions_matched_terms() -> None:
+    game_model = Article(
+        doi="10.1/x",
+        title="Paper X",
+        sources=["scopus"],
+        matched_terms=["game_model"],
+    )
+    tracking_data = Article(
+        doi="10.1/X",
+        title="Paper X",
+        sources=["openalex"],
+        matched_terms=["tracking_data"],
+    )
+
+    out = Deduper().dedupe([game_model, tracking_data])
+
+    assert len(out) == 1
+    assert out[0].matched_terms == ["game_model", "tracking_data"]

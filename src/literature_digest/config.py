@@ -42,6 +42,9 @@ class AreasFile(BaseModel):
     def lookback_days(self) -> int:
         return int(self.defaults.get("lookback_days", 17))
 
+    def first_run_lookback_days(self) -> int:
+        return int(self.defaults.get("first_run_lookback_days", 90))
+
 
 class SearchTerm(BaseModel):
     """One query loaded from ``data/search_terms/<area>/<term>.txt``."""
@@ -131,6 +134,8 @@ class Settings(BaseSettings):
     lit_model: Annotated[str, Field(default="openai/gpt-4o-mini")]
     lit_api_key: Annotated[str, Field(default="")]
     lit_api_base: Annotated[str, Field(default="")]
+    lit_fast_model: Annotated[str, Field(default="ollama_chat/llama3")]
+    lit_fast_api_base: Annotated[str, Field(default="")]
 
     # Polite pool identification
     contact_email: Annotated[str, Field(default="")]

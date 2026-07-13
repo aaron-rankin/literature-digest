@@ -52,19 +52,19 @@ def test_store_last_run_round_trip(tmp_path: Path) -> None:
         assert isinstance(store.get_last_run("sports-nutrition"), datetime)
 
 
-def test_pipeline_run_produces_empty_reports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """End-to-end smoke: with placeholder sources, the pipeline must still run
+def test_pipeline_run_produces_reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """End-to-end smoke: with network sources stubbed, the pipeline must still run
     and produce an index.html + one area HTML per configured area."""
     from literature_digest.pipeline import run_all
     from literature_digest.sources.crossref import CrossrefSource
     from literature_digest.sources.openalex import OpenAlexSource
+    from literature_digest.sources.scopus_api import ScopusApiSource
 
-    # Keep this an offline orchestration/render smoke test: the free-API sources
-    # now make real HTTP calls, so stub them back to empty for this test.
-    monkeypatch.setattr(OpenAlexSource, "search", lambda self, area, since: [])
-    monkeypatch.setattr(CrossrefSource, "search", lambda self, area, since: [])
+    # Keep this an offline orchestration/render smoke test: the sources now make
+    # real HTTP calls, so stub them back to empty for this test.
+    monkeypatch.setattr(ScopusApiSource, "search", lambda self, source_query, window: [])
+    monkeypatch.setattr(OpenAlexSource, "search", lambda self, source_query, window: [])
+    monkeypatch.setattr(CrossrefSource, "search", lambda self, source_query, window: [])
 
     # Point the pipeline at a tmp data dir so we don't touch the repo's data/.
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
