@@ -18,6 +18,8 @@ Upgrade the current plain HTML reports (`templates/area.html.j2` and `templates/
 
 ## Design directions to decide (grill session needed)
 
+Resolved in the grill session; see the decision log below. Open questions that remain out of scope for this subtask are noted explicitly.
+
 1. **Information density**
    - Collapsible abstracts? Expand-on-click action points? Or show everything by default?
    - One card per article, or a denser list view?
@@ -51,37 +53,61 @@ Upgrade the current plain HTML reports (`templates/area.html.j2` and `templates/
    - Sort by score, date, or category.
    - Copy citation / DOI button.
 
+## Grill session decisions
+
+| # | Topic | Decision |
+|---|-------|----------|
+| Q1 | Information density | **Card view, abstract collapsed by default.** Title, citation, score, category, key takeaway and action points are always visible; the abstract expands on click. |
+| Q2 | Score bands | **Discrete bands** (80–100 strong, 60–79 moderate) plus a separate **borderline** flag for articles within ±N points of the threshold (D9). |
+| Q2 | Category chips | **Color-coded chips with no icons or emojis.** Distinct text style/weight provides the non-color channel for color-blind safety (Q2b). |
+| Q2b | Color-blind safety | **Text style/weight only.** Actionable = bold/solid; monitoring = regular; background = lighter weight or muted style. |
+| Q3 | Cross-term overlap | **Duplicate full cards per matched term**, each card showing term pills for "also matched by X, Y". Each term section is self-contained. |
+| Q3b | Term navigation | **Sticky sidebar on desktop**, collapsing to a horizontal scrollable term-chip row on mobile. |
+| Q4 | Key takeaway | **Add `ScreeningResult.key_takeaway`** and update the screening prompt to emit it. The template falls back to the first action point when the field is absent. Rationale becomes the "why this matters" section. |
+| Q4b/c | Study-level data context | **Out of scope for this subtask.** (E.g. "data from elite footballers" is a future extraction subtask.) |
+| Q5/Q5b | Index page | **Functionally unchanged.** Only align CSS variables, typography and spacing with the restyled area report. No cards, trends, or filters. |
+| Q6 | Mobile layout | **Single-column cards**, sidebar becomes horizontal term chips under the header; no horizontal scrolling. |
+| Q6 | Print stylesheet | **Full print CSS:** expand collapsed abstracts, hide sticky sidebar, enforce sensible page/card breaks. |
+| Q6 | Accessibility | **Semantic HTML + ARIA on interactive controls** (abstract expand, copy-citation). No full WCAG audit. |
+| Q7 | Dark mode | **Skip.** |
+| Q7 | Sort | **Score descending within each term only.** No interactive sort control. |
+| Q7 | Copy citation/DOI | **Add a copy-citation/DOI button on each card.** |
+| Q8 | Implementation order | **Model/prompt first** (`key_takeaway`), then templates, then tests. |
+| Q8 | Tests | **Structure assertions + fragment snapshots** for the article card and term section. |
+
 ## Proposed implementation
 
-1. **Design mock-up first**
-   - Produce 2-3 quick options (wireframes or HTML prototypes) before committing.
-   - Review against the decision questions above.
+1. **Model change first**
+   - Add `key_takeaway: str | None` to `ScreeningResult` in `models.py`.
+   - Update the screening prompt to request a one-line key takeaway; ensure JSON schema validation allows the new field.
 
 2. **Template refactor**
    - Rewrite `templates/area.html.j2` with:
      - Header: area name, run metadata, summary counts.
-     - Per-term sections.
-     - Article cards with score, category, title, citation, DOI link, abstract, rationale, action points.
-     - Borderline tag (subtask 08).
-   - Rewrite `templates/index.html.j2` as a dashboard with area cards.
+     - Sticky term sidebar on desktop / horizontal term chips on mobile.
+     - Per-term sections containing article cards.
+     - Article cards: score band badge, category chip, borderline flag, title, citation, DOI link, key takeaway, rationale ("why this matters"), action points, expandable abstract, copy-citation button, "also matched by" term pills.
+     - Print-specific CSS that expands abstracts and hides the sidebar.
+   - Update `templates/index.html.j2` only enough to share CSS variables, typography and spacing with the area report; keep the existing table.
 
 3. **CSS-only styling**
    - Keep everything self-contained in the template `<style>` block so reports are portable (no external build step).
    - Use CSS variables for theming.
 
 4. **Report context updates**
-   - `report.py`: pass any extra context needed (e.g. per-term article lists, borderline band, previous run counts for trends).
-   - `AreaIndexRow`: add fields for trend/comparison if needed.
+   - `report.py`: build per-term article lists from `Article.matched_terms`, sort each term's articles by score descending, and pass a borderline band (e.g. threshold ±N) so the template can flag borderline articles.
 
 5. **Golden / snapshot tests**
-   - Snapshot key HTML fragments so future styling refactors don't accidentally break structure.
+   - Structure assertions for key elements (term headings, card count, borderline class, key-takeaway element, copy button).
+   - Snapshot fragments for a representative article card and term section.
 
 ## Files touched
 
 - `templates/area.html.j2`
 - `templates/index.html.j2`
 - `src/literature_digest/report.py`
-- `src/literature_digest/models.py` (if new report-context fields needed)
+- `src/literature_digest/models.py`
+- Screening prompt file(s) (to request `key_takeaway`)
 - New tests for rendered HTML structure.
 
 ## Acceptance criteria
@@ -91,4 +117,5 @@ Upgrade the current plain HTML reports (`templates/area.html.j2` and `templates/
 - [ ] Borderline articles are visually flagged.
 - [ ] Reports are readable on a phone without horizontal scrolling.
 - [ ] Print-to-PDF produces a clean 1-2 page per article layout.
+- [ ] Category chips are distinguishable without relying on color alone.
 - [ ] `uv run pytest` green, including new HTML snapshot/structure tests.
