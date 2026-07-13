@@ -6,45 +6,1020 @@
   <title>Data Science &mdash; Literature Digest</title>
   <style>
     :root {
-      --bg: #fafafa; --fg: #1f2937; --muted: #6b7280;
-      --border: #e5e7eb; --accent: #2563eb;
-      --actionable: #16a34a; --monitoring: #ca8a04; --background: #6b7280;
+      --bg: #f8fafc; --surface: #ffffff; --fg: #0f172a; --muted: #64748b;
+      --border: #e2e8f0; --accent: #2563eb; --accent-soft: #eff6ff;
+      --strong: #15803d; --strong-soft: #dcfce7;
+      --moderate: #b45309; --moderate-soft: #fef3c7;
+      --low: #475569; --low-soft: #f1f5f9;
+      --borderline: #be123c; --borderline-soft: #ffe4e6;
+      --actionable: var(--strong); --monitoring: var(--moderate); --background: var(--low);
+      --radius: 0.625rem; --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --maxw: 60rem;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-           background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; max-width: 48rem; }
-    a.back { color: var(--accent); text-decoration: none; font-size: 0.875rem; }
-    h1 { margin: 1rem 0 0.25rem 0; font-size: 1.5rem; }
-    .meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
-    article { border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem 1.25rem;
-              margin-bottom: 1.25rem; background: white; }
-    article header { display: flex; justify-content: space-between; align-items: baseline;
-                     gap: 1rem; margin-bottom: 0.5rem; }
-    .citation { font-weight: 600; }
-    .doi { font-size: 0.8rem; color: var(--muted); }
-    .doi a { color: var(--accent); text-decoration: none; }
-    .badge { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px;
-             white-space: nowrap; }
-    .badge.score { background: #eff6ff; color: var(--accent); font-variant-numeric: tabular-nums; }
-    .badge.directly-actionable { background: #dcfce7; color: var(--actionable); }
-    .badge.monitoring { background: #fef9c3; color: var(--monitoring); }
-    .badge.background { background: #f3f4f6; color: var(--background); }
-    .abstract { font-size: 0.9rem; line-height: 1.5; color: var(--fg); margin: 0.5rem 0 0.75rem 0; }
-    .rationale { font-size: 0.8rem; color: var(--muted); font-style: italic; margin: 0.25rem 0 0.75rem 0; }
-    .action-points { margin: 0.5rem 0 0 0; padding-left: 1.25rem; }
-    .action-points li { font-size: 0.875rem; margin-bottom: 0.35rem; }
-    .action-points .cat { font-size: 0.7rem; color: var(--muted); margin-left: 0.5rem; }
-    .empty { color: var(--muted); font-style: italic; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--fg); margin: 0; line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    a:hover { text-decoration: underline; }
+
+    .layout { max-width: var(--maxw); margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+
+    /* Header */
+    .back { font-size: .8rem; color: var(--muted); text-decoration: none; }
+    h1 { margin: .35rem 0 .15rem; font-size: 1.6rem; letter-spacing: -0.01em; }
+    .meta { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
+    .summary { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0; }
+    .summary span { background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: .2rem .7rem; font-size: .75rem; color: var(--muted); }
+    .summary b { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+    /* Filter bar */
+    .filters { display: flex; flex-wrap: wrap; gap: .45rem; margin: 1.25rem 0 1.5rem;
+      padding-bottom: .9rem; border-bottom: 1px solid var(--border); }
+    .filter-btn { font: inherit; font-size: .82rem; color: var(--fg); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 999px; padding: .3rem .8rem;
+      cursor: pointer; transition: background .12s, color .12s, border-color .12s;
+      display: inline-flex; align-items: center; gap: .35rem; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn[aria-pressed="true"] { background: var(--fg); color: #fff; border-color: var(--fg); }
+    .filter-btn[aria-pressed="true"] .count { color: rgba(255,255,255,.8); }
+    .filter-btn .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .75rem; }
+
+    .empty-filter { display: none; color: var(--muted); font-style: italic; padding: 1.5rem 0; }
+    .empty-filter.is-visible { display: block; }
+
+    /* Card */
+    article.card { background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.15rem 1.1rem; margin-bottom: 1rem;
+      box-shadow: var(--shadow); border-left: 4px solid var(--border); }
+    article.card[hidden] { display: none; }
+    article.card.band-strong { border-left-color: var(--strong); }
+    article.card.band-moderate { border-left-color: var(--moderate); }
+    article.card.band-low { border-left-color: var(--low); }
+    article.card.is-borderline { border-left-color: var(--borderline);
+      box-shadow: 0 0 0 1px var(--borderline-soft), var(--shadow); }
+
+    .card-top { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+    .badges { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+
+    .score { font-weight: 700; font-variant-numeric: tabular-nums; font-size: .8rem;
+      padding: .15rem .5rem; border-radius: .35rem; color: #fff; }
+    .score.band-strong { background: var(--strong); }
+    .score.band-moderate { background: var(--moderate); }
+    .score.band-low { background: var(--low); }
+
+    .chip { font-size: .72rem; font-weight: 600; padding: .15rem .55rem; border-radius: 999px;
+      border: 1px solid transparent; white-space: nowrap; }
+    .chip.directly-actionable { background: var(--strong-soft); color: var(--actionable);
+      border-color: color-mix(in srgb, var(--actionable) 25%, transparent); font-weight: 700; }
+    .chip.monitoring { background: var(--moderate-soft); color: var(--monitoring);
+      border-color: color-mix(in srgb, var(--monitoring) 25%, transparent); font-weight: 500; }
+    .chip.background { background: var(--low-soft); color: var(--background);
+      border-color: color-mix(in srgb, var(--background) 20%, transparent);
+      font-weight: 400; font-style: italic; opacity: .85; }
+
+    .flag-borderline { background: var(--borderline-soft); color: var(--borderline);
+      font-size: .68rem; font-weight: 700; letter-spacing: .02em; padding: .15rem .5rem;
+      border-radius: .35rem; border: 1px solid color-mix(in srgb, var(--borderline) 30%, transparent);
+      text-transform: uppercase; }
+
+    h3.title { margin: .55rem 0 .15rem; font-size: 1.02rem; line-height: 1.35; }
+    .citation { font-weight: 600; font-size: .82rem; color: var(--fg); }
+    .doi { font-size: .78rem; color: var(--muted); }
+    .doi a { text-decoration: none; }
+
+    .takeaway { background: var(--accent-soft); border-left: 3px solid var(--accent);
+      padding: .5rem .7rem; border-radius: .35rem; margin: .65rem 0;
+      font-size: .88rem; font-weight: 600; }
+    .takeaway .label { display: block; font-size: .65rem; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--accent); margin-bottom: .15rem; font-weight: 700; }
+
+    .why { font-size: .82rem; color: var(--muted); margin: .35rem 0 .5rem; }
+    .why .label { font-weight: 700; color: var(--fg); }
+
+    .points { margin: .55rem 0 0; padding-left: 1.1rem; }
+    .points li { font-size: .85rem; margin-bottom: .3rem; }
+    .points li .cat { font-size: .68rem; margin-left: .35rem; }
+
+    .terms-pills { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .55rem; }
+    .pill { font-size: .68rem; padding: .1rem .45rem; border-radius: 999px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .pill.other { font-style: italic; }
+
+    details.abstract { margin-top: .55rem; }
+    details.abstract > summary { cursor: pointer; font-size: .8rem; color: var(--accent);
+      list-style: none; user-select: none; }
+    details.abstract > summary::-webkit-details-marker { display: none; }
+    details.abstract > summary::before { content: "▸ "; font-size: .7rem; }
+    details.abstract[open] > summary::before { content: "▾ "; }
+    details.abstract > .abstract-body { font-size: .86rem; line-height: 1.55;
+      color: var(--fg); margin-top: .4rem; padding-top: .4rem; border-top: 1px dashed var(--border); }
+
+    .card-actions { margin-top: .55rem; display: flex; gap: .4rem; flex-wrap: wrap; }
+    .btn-copy { font: inherit; font-size: .72rem; color: var(--muted); background: var(--surface);
+      border: 1px solid var(--border); border-radius: .35rem; padding: .2rem .5rem; cursor: pointer;
+      transition: color .12s, border-color .12s; }
+    .btn-copy:hover { color: var(--accent); border-color: var(--accent); }
+    .btn-copy.copied { color: var(--strong); border-color: var(--strong); }
+
+    .empty { color: var(--muted); font-style: italic; padding: 2rem 0; }
+
+    /* Print */
+    @media print {
+      body { background: #fff; }
+      .layout { max-width: none; padding: 0; }
+      .filters, .card-actions { display: none; }
+      article.card { break-inside: avoid; box-shadow: none; border-left-width: 3px; }
+      article.card[hidden] { display: block !important; }
+      .empty-filter { display: none !important; }
+      details.abstract > .abstract-body { display: block !important; }
+      details.abstract > summary { display: none; }
+      a { color: var(--fg); text-decoration: underline; }
+    }
   </style>
 </head>
 <body>
-  <a class="back" href="../index.html">&larr; all areas</a>
-  <h1>Data Science</h1>
-  <div class="meta">
-    0 retained articles &middot;
-    threshold 55/100 &middot;
-    generated 2026-07-09 12:26
+  <div class="layout">
+    <div class="topbar">
+      <a class="back" href="../index.html">&larr; all areas</a>
+      <h1>Data Science</h1>
+      <div class="meta">
+        19 retained articles &middot;
+        threshold 55/100 &middot; borderline within &plusmn;5 &middot;
+        generated 2026-07-13 16:59
+      </div>
+      <div class="summary">
+        <span><b>16</b> strong (80&ndash;100)</span>
+        <span><b>1</b> moderate (60&ndash;79)</span>
+<span><b>2</b> low (&lt;60)</span><span><b>2</b> borderline</span>        <span><b>4</b> search terms</span>
+      </div>
+    </div>
+
+    <div class="filters" role="group" aria-label="Filter by search term">
+      <button class="filter-btn" type="button" data-term="all" aria-pressed="true">
+        All <span class="count">19</span>
+      </button>
+      <button class="filter-btn" type="button" data-term="game_model" aria-pressed="false">
+        game_model <span class="count">5</span>
+      </button>
+      <button class="filter-btn" type="button" data-term="spatiotemporal" aria-pressed="false">
+        spatiotemporal <span class="count">5</span>
+      </button>
+      <button class="filter-btn" type="button" data-term="style_of_play" aria-pressed="false">
+        style_of_play <span class="count">4</span>
+      </button>
+      <button class="filter-btn" type="button" data-term="tracking_data" aria-pressed="false">
+        tracking_data <span class="count">5</span>
+      </button>
+    </div>
+
+    <p class="empty-filter" id="empty-filter">No articles match this term.</p>
+
+    <main>
+      <article class="card band-strong" data-terms="style_of_play">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">98</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.style_of_play.2">10.9999/fake.data_science.style_of_play.2</a>          </div>
+        </div>
+
+        <h3 class="title">A practitioner workflow for playing-style fingerprint using passing network centrality</h3>
+        <div class="citation">Oyelaran, E. et al. (2025). European Journal of Sport Science</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A practitioner workflow for playing-style fingerprint using .
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A practitioner workflow for playing-style fingerprint using passing network centrality&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A practitioner workflow for playing-style fingerpr&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">style_of_play</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This applied study describes and evaluates a workflow that turns raw passing network centrality into coach-facing playing-style fingerprint summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Oyelaran, E. et al. (2025). European Journal of Sport Science https://doi.org/10.9999/fake.data_science.style_of_play.2"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="game_model">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">97</span>
+              <span class="chip monitoring">monitoring</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.game_model.2">10.9999/fake.data_science.game_model.2</a>          </div>
+        </div>
+
+        <h3 class="title">A practitioner workflow for playing-model adherence using positional compactness index</h3>
+        <div class="citation">Novak, I. et al. (2024). European Journal of Sport Science</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A practitioner workflow for playing-model adherence using po.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A practitioner workflow for playing-model adherence using positional compactness index&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A practitioner workflow for playing-model adherenc&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">game_model</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This applied study describes and evaluates a workflow that turns raw positional compactness index into coach-facing playing-model adherence summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Novak, I. et al. (2024). European Journal of Sport Science https://doi.org/10.9999/fake.data_science.game_model.2"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="spatiotemporal">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">97</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.spatiotemporal.2">10.9999/fake.data_science.spatiotemporal.2</a>          </div>
+        </div>
+
+        <h3 class="title">A practitioner workflow for space-time interaction using Voronoi space control</h3>
+        <div class="citation">Sundqvist, C. et al. (2024). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A practitioner workflow for space-time interaction using Vor.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A practitioner workflow for space-time interaction using Voronoi space control&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A practitioner workflow for space-time interaction&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">spatiotemporal</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This applied study describes and evaluates a workflow that turns raw Voronoi space control into coach-facing space-time interaction summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Sundqvist, C. et al. (2024). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.spatiotemporal.2"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="spatiotemporal">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">95</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.spatiotemporal.1">10.9999/fake.data_science.spatiotemporal.1</a>          </div>
+        </div>
+
+        <h3 class="title">Validating spatiotemporal pitch occupation against match outcomes in elite football</h3>
+        <div class="citation">Virtanen, E. et al. (2024). Journal of Sports Sciences</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Validating spatiotemporal pitch occupation against match out.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Validating spatiotemporal pitch occupation against match outcomes in elite football&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Validating spatiotemporal pitch occupation against&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">spatiotemporal</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We analysed a full competitive season of first-team matches to test whether spatiotemporal pitch occupation derived from temporal synchronisation index predicts match outcomes. Using data from an elite men&#39;s league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Virtanen, E. et al. (2024). Journal of Sports Sciences https://doi.org/10.9999/fake.data_science.spatiotemporal.1"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="game_model">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">93</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.game_model.3">10.9999/fake.data_science.game_model.3</a>          </div>
+        </div>
+
+        <h3 class="title">A graph-neural approach to modelling structured possession model from expected threat</h3>
+        <div class="citation">Petrov, A. et al. (2025). Journal of Sports Sciences</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A graph-neural approach to modelling structured possession m.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A graph-neural approach to modelling structured possession model from expected threat&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A graph-neural approach to modelling structured po&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">game_model</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We propose a graph-neural architecture that learns structured possession model representations from expected threat. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Petrov, A. et al. (2025). Journal of Sports Sciences https://doi.org/10.9999/fake.data_science.game_model.3"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="spatiotemporal">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">89</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.spatiotemporal.5">10.9999/fake.data_science.spatiotemporal.5</a>          </div>
+        </div>
+
+        <h3 class="title">spatiotemporal pitch occupation in recreational five-a-side players: an exploratory study</h3>
+        <div class="citation">Petrov, G. et al. (2024). European Journal of Sport Science</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for spatiotemporal pitch occupation in recreational five-a-side .
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;spatiotemporal pitch occupation in recreational five-a-side players: an exploratory study&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;spatiotemporal pitch occupation in recreational fi&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">spatiotemporal</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We explored spatiotemporal pitch occupation using space-generation rate in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Petrov, G. et al. (2024). European Journal of Sport Science https://doi.org/10.9999/fake.data_science.spatiotemporal.5"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="tracking_data">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">87</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.tracking_data.5">10.9999/fake.data_science.tracking_data.5</a>          </div>
+        </div>
+
+        <h3 class="title">player tracking streams in recreational five-a-side players: an exploratory study</h3>
+        <div class="citation">Xu, J. et al. (2025). Journal of Sports Sciences</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for player tracking streams in recreational five-a-side players:.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;player tracking streams in recreational five-a-side players: an exploratory study&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;player tracking streams in recreational five-a-sid&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">tracking_data</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We explored player tracking streams using high-speed running distance in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Xu, J. et al. (2025). Journal of Sports Sciences https://doi.org/10.9999/fake.data_science.tracking_data.5"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="tracking_data">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">86</span>
+              <span class="chip background">background</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.tracking_data.4">10.9999/fake.data_science.tracking_data.4</a>          </div>
+        </div>
+
+        <h3 class="title">Sensitivity of GPS-derived positional data estimates to off-ball run detection sampling frequency</h3>
+        <div class="citation">Xu, D. et al. (2024). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Sensitivity of GPS-derived positional data estimates to off-.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Sensitivity of GPS-derived positional data estimates to off-ball run detection sampling frequency&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Sensitivity of GPS-derived positional data estimat&#39; and decide whether to adopt.<span class="cat">[background]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">tracking_data</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This methodological paper quantifies how GPS-derived positional data estimates vary with the sampling frequency of off-ball run detection. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Xu, D. et al. (2024). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.tracking_data.4"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="game_model">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">85</span>
+              <span class="chip monitoring">monitoring</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.game_model.5">10.9999/fake.data_science.game_model.5</a>          </div>
+        </div>
+
+        <h3 class="title">team game model in recreational five-a-side players: an exploratory study</h3>
+        <div class="citation">Wojcik, I. et al. (2024). Frontiers in Sports Modelling</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for team game model in recreational five-a-side players: an expl.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;team game model in recreational five-a-side players: an exploratory study&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;team game model in recreational five-a-side player&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">game_model</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We explored team game model using expected threat in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Wojcik, I. et al. (2024). Frontiers in Sports Modelling https://doi.org/10.9999/fake.data_science.game_model.5"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="spatiotemporal">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">85</span>
+              <span class="chip monitoring">monitoring</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.spatiotemporal.4">10.9999/fake.data_science.spatiotemporal.4</a>          </div>
+        </div>
+
+        <h3 class="title">Sensitivity of space-time interaction estimates to convex-hull surface area sampling frequency</h3>
+        <div class="citation">Sundqvist, K. et al. (2025). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Sensitivity of space-time interaction estimates to convex-hu.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Sensitivity of space-time interaction estimates to convex-hull surface area sampling frequency&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Sensitivity of space-time interaction estimates to&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">spatiotemporal</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This methodological paper quantifies how space-time interaction estimates vary with the sampling frequency of convex-hull surface area. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Sundqvist, K. et al. (2025). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.spatiotemporal.4"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="tracking_data">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">85</span>
+              <span class="chip monitoring">monitoring</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.tracking_data.3">10.9999/fake.data_science.tracking_data.3</a>          </div>
+        </div>
+
+        <h3 class="title">A graph-neural approach to modelling optical tracking data from synchronised movement</h3>
+        <div class="citation">Rasmussen, D. et al. (2025). European Journal of Sport Science</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A graph-neural approach to modelling optical tracking data f.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A graph-neural approach to modelling optical tracking data from synchronised movement&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A graph-neural approach to modelling optical track&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">tracking_data</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We propose a graph-neural architecture that learns optical tracking data representations from synchronised movement. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Rasmussen, D. et al. (2025). European Journal of Sport Science https://doi.org/10.9999/fake.data_science.tracking_data.3"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="style_of_play">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">84</span>
+              <span class="chip background">background</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.style_of_play.5">10.9999/fake.data_science.style_of_play.5</a>          </div>
+        </div>
+
+        <h3 class="title">playing-style fingerprint in recreational five-a-side players: an exploratory study</h3>
+        <div class="citation">Mbeki, B. et al. (2025). Journal of Sports Sciences</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for playing-style fingerprint in recreational five-a-side player.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;playing-style fingerprint in recreational five-a-side players: an exploratory study&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;playing-style fingerprint in recreational five-a-s&#39; and decide whether to adopt.<span class="cat">[background]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">style_of_play</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We explored playing-style fingerprint using passing network centrality in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Mbeki, B. et al. (2025). Journal of Sports Sciences https://doi.org/10.9999/fake.data_science.style_of_play.5"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="style_of_play">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">83</span>
+              <span class="chip background">background</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.style_of_play.4">10.9999/fake.data_science.style_of_play.4</a>          </div>
+        </div>
+
+        <h3 class="title">Sensitivity of style of play estimates to vertical progression ratio sampling frequency</h3>
+        <div class="citation">Novak, F. et al. (2025). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Sensitivity of style of play estimates to vertical progressi.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Sensitivity of style of play estimates to vertical progression ratio sampling frequency&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Sensitivity of style of play estimates to vertical&#39; and decide whether to adopt.<span class="cat">[background]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">style_of_play</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This methodological paper quantifies how style of play estimates vary with the sampling frequency of vertical progression ratio. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Novak, F. et al. (2025). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.style_of_play.4"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="tracking_data">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">83</span>
+              <span class="chip background">background</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.tracking_data.2">10.9999/fake.data_science.tracking_data.2</a>          </div>
+        </div>
+
+        <h3 class="title">A practitioner workflow for player tracking streams using high-speed running distance</h3>
+        <div class="citation">Mbeki, D. et al. (2024). European Journal of Sport Science</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A practitioner workflow for player tracking streams using hi.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A practitioner workflow for player tracking streams using high-speed running distance&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A practitioner workflow for player tracking stream&#39; and decide whether to adopt.<span class="cat">[background]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">tracking_data</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This applied study describes and evaluates a workflow that turns raw high-speed running distance into coach-facing player tracking streams summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Mbeki, D. et al. (2024). European Journal of Sport Science https://doi.org/10.9999/fake.data_science.tracking_data.2"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="style_of_play">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">82</span>
+              <span class="chip directly-actionable">directly actionable</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.style_of_play.3">10.9999/fake.data_science.style_of_play.3</a>          </div>
+        </div>
+
+        <h3 class="title">A graph-neural approach to modelling playing-style fingerprint from passing network centrality</h3>
+        <div class="citation">Ubeda, G. et al. (2025). Frontiers in Sports Modelling</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A graph-neural approach to modelling playing-style fingerpri.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A graph-neural approach to modelling playing-style fingerprint from passing network centrality&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;A graph-neural approach to modelling playing-style&#39; and decide whether to adopt.<span class="cat">[directly actionable]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">style_of_play</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We propose a graph-neural architecture that learns playing-style fingerprint representations from passing network centrality. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Ubeda, G. et al. (2025). Frontiers in Sports Modelling https://doi.org/10.9999/fake.data_science.style_of_play.3"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-strong" data-terms="tracking_data">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-strong">82</span>
+              <span class="chip background">background</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.tracking_data.1">10.9999/fake.data_science.tracking_data.1</a>          </div>
+        </div>
+
+        <h3 class="title">Validating multi-camera tracking against match outcomes in elite football</h3>
+        <div class="citation">Tanaka, H. et al. (2024). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Validating multi-camera tracking against match outcomes in e.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Validating multi-camera tracking against match outcomes in elite football&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Validating multi-camera tracking against match out&#39; and decide whether to adopt.<span class="cat">[background]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">tracking_data</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We analysed a full competitive season of first-team matches to test whether multi-camera tracking derived from pitch-control surface predicts match outcomes. Using data from an elite men&#39;s league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Tanaka, H. et al. (2024). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.tracking_data.1"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-moderate" data-terms="game_model">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-moderate">60</span>
+              <span class="chip monitoring">monitoring</span>
+          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.game_model.1">10.9999/fake.data_science.game_model.1</a>          </div>
+        </div>
+
+        <h3 class="title">Validating positional play framework against match outcomes in elite football</h3>
+        <div class="citation">Mbeki, B. et al. (2025). International Journal of Performance Analysis in Sport</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Validating positional play framework against match outcomes .
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Validating positional play framework against match outcomes in elite football&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Validating positional play framework against match&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">game_model</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We analysed a full competitive season of first-team matches to test whether positional play framework derived from possession-chain value predicts match outcomes. Using data from an elite men&#39;s league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Mbeki, B. et al. (2025). International Journal of Performance Analysis in Sport https://doi.org/10.9999/fake.data_science.game_model.1"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-low is-borderline" data-terms="game_model">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-low">59</span>
+              <span class="chip monitoring">monitoring</span>
+<span class="flag-borderline" title="within ±5 of the 55 threshold">borderline</span>          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.game_model.4">10.9999/fake.data_science.game_model.4</a>          </div>
+        </div>
+
+        <h3 class="title">Sensitivity of structured possession model estimates to expected threat sampling frequency</h3>
+        <div class="citation">Wojcik, C. et al. (2025). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for Sensitivity of structured possession model estimates to expe.
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;Sensitivity of structured possession model estimates to expected threat sampling frequency&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+        <ul class="points">
+          <li>Review &#39;Sensitivity of structured possession model estimat&#39; and decide whether to adopt.<span class="cat">[monitoring]</span></li>
+        </ul>
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">game_model</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">This methodological paper quantifies how structured possession model estimates vary with the sampling frequency of expected threat. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Wojcik, C. et al. (2025). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.game_model.4"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+      <article class="card band-low is-borderline" data-terms="spatiotemporal">
+        <div class="card-top">
+          <div class="badges">
+              <span class="score band-low">53</span>
+              <span class="chip background">background</span>
+<span class="flag-borderline" title="within ±5 of the 55 threshold">borderline</span>          </div>
+          <div class="doi">
+DOI: <a href="https://doi.org/10.9999/fake.data_science.spatiotemporal.3">10.9999/fake.data_science.spatiotemporal.3</a>          </div>
+        </div>
+
+        <h3 class="title">A graph-neural approach to modelling space-time interaction from space-generation rate</h3>
+        <div class="citation">Tanaka, J. et al. (2025). Journal of Sports Analytics</div>
+
+        <div class="takeaway">
+          <span class="label">Key takeaway</span>
+          Preview takeaway for A graph-neural approach to modelling space-time interaction .
+        </div>
+
+        <p class="why"><span class="label">Why this matters:</span> Synthesised preview screening for &#39;A graph-neural approach to modelling space-time interaction from space-generation rate&#39;. This is a deterministic stand-in for the LLM call so the report UI can be iterated on offline.</p>
+
+
+        <div class="terms-pills" aria-label="Matched by">
+          <span class="pill">spatiotemporal</span>
+        </div>
+
+        <details class="abstract">
+          <summary aria-expanded="false">Show abstract</summary>
+          <div class="abstract-body">We propose a graph-neural architecture that learns space-time interaction representations from space-generation rate. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.</div>
+        </details>
+
+        <div class="card-actions">
+          <button class="btn-copy" type="button"
+            data-citation="Tanaka, J. et al. (2025). Journal of Sports Analytics https://doi.org/10.9999/fake.data_science.spatiotemporal.3"
+            aria-label="Copy citation">Copy citation</button>
+        </div>
+      </article>
+    </main>
   </div>
 
-    <p class="empty">No articles retained for this area in the latest run.</p>
+  <script>
+    (function () {
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('.filter-btn'));
+      var cards = Array.prototype.slice.call(document.querySelectorAll('article.card[data-terms]'));
+      var emptyEl = document.getElementById('empty-filter');
+
+      function applyFilter(term) {
+        var matchCount = 0;
+        cards.forEach(function (card) {
+          var terms = card.getAttribute('data-terms').split(' ');
+          var show = (term === 'all') || (terms.indexOf(term) !== -1);
+          if (show) { card.removeAttribute('hidden'); matchCount++; }
+          else { card.setAttribute('hidden', ''); }
+        });
+        buttons.forEach(function (btn) {
+          btn.setAttribute('aria-pressed', btn.getAttribute('data-term') === term ? 'true' : 'false');
+        });
+        if (emptyEl) {
+          if (matchCount === 0 && term !== 'all') { emptyEl.classList.add('is-visible'); }
+          else { emptyEl.classList.remove('is-visible'); }
+        }
+      }
+
+      function termFromHash() {
+        var h = location.hash || '';
+        var prefix = '#term-';
+        if (h.indexOf(prefix) === 0) return decodeURIComponent(h.slice(prefix.length));
+        return 'all';
+      }
+
+      function setHash(term) {
+        if (term === 'all') {
+          history.replaceState(null, '', location.pathname + location.search);
+        } else {
+          history.replaceState(null, '', '#term-' + encodeURIComponent(term));
+        }
+      }
+
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var term = btn.getAttribute('data-term');
+          setHash(term);
+          applyFilter(term);
+        });
+      });
+
+      window.addEventListener('hashchange', function () { applyFilter(termFromHash()); });
+
+      // Apply the filter indicated by the URL hash on load (deep-link support).
+      var initial = termFromHash();
+      var known = buttons.some(function (btn) { return btn.getAttribute('data-term') === initial; });
+      applyFilter(known ? initial : 'all');
+    })();
+
+    // Copy-citation: copy the data-citation string to the clipboard and give
+    // brief visual confirmation. No external dependencies.
+    document.querySelectorAll('.btn-copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-citation') || '';
+        var done = function () {
+          var prev = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = prev; btn.classList.remove('copied'); }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {});
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
+    });
+
+    // Keep the <details> summary's aria-expanded in sync (for older browsers).
+    document.querySelectorAll('details.abstract').forEach(function (d) {
+      var sync = function () { d.querySelector('summary').setAttribute('aria-expanded', d.open ? 'true' : 'false'); };
+      d.addEventListener('toggle', sync); sync();
+    });
+
+    // Before printing, open all collapsed abstracts so print-to-PDF shows them.
+    // Restore the previous state afterwards so the on-screen view is unchanged.
+    // The filter JS hides cards via [hidden]; print CSS forces them visible.
+    (function () {
+      var snapshot = [];
+      window.addEventListener('beforeprint', function () {
+        snapshot = [];
+        document.querySelectorAll('details.abstract').forEach(function (d) {
+          snapshot.push(d.open);
+          d.open = true;
+        });
+      });
+      window.addEventListener('afterprint', function () {
+        document.querySelectorAll('details.abstract').forEach(function (d, i) {
+          if (typeof snapshot[i] !== 'undefined') d.open = snapshot[i];
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
