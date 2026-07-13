@@ -30,6 +30,26 @@ Use `uv run …`:
 - If a command fails because a package is missing, `uv sync` first; never fall
   back to the system Python.
 
+## UI work must regenerate visible reports
+
+When working on anything the user can *see* — `templates/*.html.j2`, `report.py`
+context shaping, CSS, report layout — **always regenerate the on-disk reports
+and point the user at the file** so they can open the result in a browser.
+Running the full pipeline is not the way to do this during UI iteration: it
+calls the LLM (slow, hangs without an API key) and hides the work behind
+network calls.
+
+Use the dedicated preview script, which loads `data/fixtures/<area>/*.json`,
+synthesises deterministic screening/action-points (no LLM, no network), and
+writes to `data/reports/`:
+
+    uv run python scripts/render_preview.py --area data_science
+    open data/reports/areas/data_science.html
+
+Do this even if the task doesn't ask for it explicitly — the user wants to see
+UI output by default whenever templates/visuals change. Don't just say "passes
+tests" and stop; render, open, and tell them the path.
+
 ## Prefer local runs for development and debugging
 
 The pipeline can run fully offline against committed fixtures in
