@@ -6,77 +6,335 @@
   <title>{{ area.name }} &mdash; Literature Digest</title>
   <style>
     :root {
-      --bg: #fafafa; --fg: #1f2937; --muted: #6b7280;
-      --border: #e5e7eb; --accent: #2563eb;
-      --actionable: #16a34a; --monitoring: #ca8a04; --background: #6b7280;
+      --bg: #f8fafc; --surface: #ffffff; --fg: #0f172a; --muted: #64748b;
+      --border: #e2e8f0; --accent: #2563eb; --accent-soft: #eff6ff;
+      --strong: #15803d; --strong-soft: #dcfce7;
+      --moderate: #b45309; --moderate-soft: #fef3c7;
+      --low: #475569; --low-soft: #f1f5f9;
+      --borderline: #be123c; --borderline-soft: #ffe4e6;
+      --actionable: var(--strong); --monitoring: var(--moderate); --background: var(--low);
+      --radius: 0.625rem; --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --maxw: 60rem;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-           background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; max-width: 48rem; }
-    a.back { color: var(--accent); text-decoration: none; font-size: 0.875rem; }
-    h1 { margin: 1rem 0 0.25rem 0; font-size: 1.5rem; }
-    .meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
-    article { border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem 1.25rem;
-              margin-bottom: 1.25rem; background: white; }
-    article header { display: flex; justify-content: space-between; align-items: baseline;
-                     gap: 1rem; margin-bottom: 0.5rem; }
-    .citation { font-weight: 600; }
-    .doi { font-size: 0.8rem; color: var(--muted); }
-    .doi a { color: var(--accent); text-decoration: none; }
-    .badge { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px;
-             white-space: nowrap; }
-    .badge.score { background: #eff6ff; color: var(--accent); font-variant-numeric: tabular-nums; }
-    .badge.directly-actionable { background: #dcfce7; color: var(--actionable); }
-    .badge.monitoring { background: #fef9c3; color: var(--monitoring); }
-    .badge.background { background: #f3f4f6; color: var(--background); }
-    .abstract { font-size: 0.9rem; line-height: 1.5; color: var(--fg); margin: 0.5rem 0 0.75rem 0; }
-    .rationale { font-size: 0.8rem; color: var(--muted); font-style: italic; margin: 0.25rem 0 0.75rem 0; }
-    .action-points { margin: 0.5rem 0 0 0; padding-left: 1.25rem; }
-    .action-points li { font-size: 0.875rem; margin-bottom: 0.35rem; }
-    .action-points .cat { font-size: 0.7rem; color: var(--muted); margin-left: 0.5rem; }
-    .empty { color: var(--muted); font-style: italic; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--fg); margin: 0; line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    a:hover { text-decoration: underline; }
+
+    .layout { display: grid; grid-template-columns: 16rem 1fr; gap: 2rem;
+              max-width: var(--maxw); margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+
+    /* Header */
+    .topbar { grid-column: 1 / -1; }
+    .back { font-size: .8rem; color: var(--muted); text-decoration: none; }
+    h1 { margin: .35rem 0 .15rem; font-size: 1.6rem; letter-spacing: -0.01em; }
+    .meta { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
+    .summary { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0; }
+    .summary span { background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: .2rem .7rem; font-size: .75rem; color: var(--muted); }
+    .summary b { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+    /* Sidebar (desktop) */
+    nav.toc { position: sticky; top: 1.25rem; align-self: start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: .85rem .6rem; box-shadow: var(--shadow); max-height: calc(100vh - 2.5rem); overflow: auto; }
+    nav.toc h2 { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em;
+                 color: var(--muted); margin: .25rem .5rem .5rem; }
+    nav.toc ol { list-style: none; padding: 0; margin: 0; }
+    nav.toc a { display: flex; justify-content: space-between; gap: .5rem;
+      padding: .35rem .5rem; border-radius: .4rem; font-size: .85rem; color: var(--fg);
+      text-decoration: none; }
+    nav.toc a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
+    nav.toc .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .75rem; }
+
+    /* Term section */
+    main { min-width: 0; }
+    section.term { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+    .term-head { display: flex; align-items: baseline; gap: .6rem; margin: 0 0 .9rem;
+      padding-bottom: .4rem; border-bottom: 2px solid var(--border); }
+    .term-head h2 { font-size: 1.15rem; margin: 0; text-transform: capitalize; }
+    .term-head .n { color: var(--muted); font-size: .8rem; }
+
+    .empty { color: var(--muted); font-style: italic; padding: 2rem 0; }
+
+    /* Card */
+    article.card { background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.15rem 1.1rem; margin-bottom: 1rem;
+      box-shadow: var(--shadow); border-left: 4px solid var(--border); }
+    article.card.band-strong { border-left-color: var(--strong); }
+    article.card.band-moderate { border-left-color: var(--moderate); }
+    article.card.band-low { border-left-color: var(--low); }
+    article.card.is-borderline { border-left-color: var(--borderline);
+      box-shadow: 0 0 0 1px var(--borderline-soft), var(--shadow); }
+
+    .card-top { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+    .badges { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+
+    .score { font-weight: 700; font-variant-numeric: tabular-nums; font-size: .8rem;
+      padding: .15rem .5rem; border-radius: .35rem; color: #fff; }
+    .score.band-strong { background: var(--strong); }
+    .score.band-moderate { background: var(--moderate); }
+    .score.band-low { background: var(--low); }
+
+    .chip { font-size: .72rem; font-weight: 600; padding: .15rem .55rem; border-radius: 999px;
+      border: 1px solid transparent; white-space: nowrap; }
+    .chip.directly-actionable { background: var(--strong-soft); color: var(--actionable);
+      border-color: color-mix(in srgb, var(--actionable) 25%, transparent); font-weight: 700; }
+    .chip.monitoring { background: var(--moderate-soft); color: var(--monitoring);
+      border-color: color-mix(in srgb, var(--monitoring) 25%, transparent); font-weight: 500; }
+    .chip.background { background: var(--low-soft); color: var(--background);
+      border-color: color-mix(in srgb, var(--background) 20%, transparent);
+      font-weight: 400; font-style: italic; opacity: .85; }
+
+    .flag-borderline { background: var(--borderline-soft); color: var(--borderline);
+      font-size: .68rem; font-weight: 700; letter-spacing: .02em; padding: .15rem .5rem;
+      border-radius: .35rem; border: 1px solid color-mix(in srgb, var(--borderline) 30%, transparent);
+      text-transform: uppercase; }
+
+    h3.title { margin: .55rem 0 .15rem; font-size: 1.02rem; line-height: 1.35; }
+    .citation { font-weight: 600; font-size: .82rem; color: var(--fg); }
+    .doi { font-size: .78rem; color: var(--muted); }
+    .doi a { text-decoration: none; }
+
+    .takeaway { background: var(--accent-soft); border-left: 3px solid var(--accent);
+      padding: .5rem .7rem; border-radius: .35rem; margin: .65rem 0;
+      font-size: .88rem; font-weight: 600; }
+    .takeaway .label { display: block; font-size: .65rem; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--accent); margin-bottom: .15rem; font-weight: 700; }
+
+    .why { font-size: .82rem; color: var(--muted); margin: .35rem 0 .5rem; }
+    .why .label { font-weight: 700; color: var(--fg); }
+
+    .points { margin: .55rem 0 0; padding-left: 1.1rem; }
+    .points li { font-size: .85rem; margin-bottom: .3rem; }
+    .points li .cat { font-size: .68rem; margin-left: .35rem; }
+
+    .terms-pills { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .55rem; }
+    .pill { font-size: .68rem; padding: .1rem .45rem; border-radius: 999px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .pill.current { background: var(--fg); color: #fff; border-color: var(--fg); }
+
+    details.abstract { margin-top: .55rem; }
+    details.abstract > summary { cursor: pointer; font-size: .8rem; color: var(--accent);
+      list-style: none; user-select: none; }
+    details.abstract > summary::-webkit-details-marker { display: none; }
+    details.abstract > summary::before { content: "▸ "; font-size: .7rem; }
+    details.abstract[open] > summary::before { content: "▾ "; }
+    details.abstract > .abstract-body { font-size: .86rem; line-height: 1.55;
+      color: var(--fg); margin-top: .4rem; padding-top: .4rem; border-top: 1px dashed var(--border); }
+
+    .card-actions { margin-top: .55rem; display: flex; gap: .4rem; flex-wrap: wrap; }
+    .btn-copy { font: inherit; font-size: .72rem; color: var(--muted); background: var(--surface);
+      border: 1px solid var(--border); border-radius: .35rem; padding: .2rem .5rem; cursor: pointer;
+      transition: color .12s, border-color .12s; }
+    .btn-copy:hover { color: var(--accent); border-color: var(--accent); }
+    .btn-copy.copied { color: var(--strong); border-color: var(--strong); }
+
+    /* Mobile */
+    .term-chips { display: none; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 1.25rem; }
+    .term-chips a { font-size: .8rem; text-decoration: none; color: var(--fg);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+      padding: .25rem .65rem; }
+    .term-chips a:hover { background: var(--accent-soft); color: var(--accent); }
+    @media (max-width: 48rem) {
+      .layout { grid-template-columns: 1fr; padding: 1rem; gap: 1.25rem; }
+      nav.toc { display: none; }
+      .term-chips { display: flex; }
+    }
+
+    /* Print */
+    @media print {
+      body { background: #fff; }
+      .layout { display: block; max-width: none; padding: 0; }
+      nav.toc, .term-chips, .card-actions { display: none; }
+      article.card { break-inside: avoid; box-shadow: none; border-left-width: 3px; }
+      section.term { break-after: auto; }
+      details.abstract > .abstract-body { display: block !important; }
+      details.abstract > summary { display: none; }
+      a { color: var(--fg); text-decoration: underline; }
+    }
   </style>
 </head>
 <body>
-  <a class="back" href="../index.html">&larr; all areas</a>
-  <h1>{{ area.name }}</h1>
-  <div class="meta">
-    {{ articles|length }} retained article{{ '' if articles|length == 1 else 's' }} &middot;
-    threshold {{ threshold }}/100 &middot;
-    generated {{ generated_at }}
+  <div class="layout">
+    <div class="topbar">
+      <a class="back" href="../index.html">&larr; all areas</a>
+      <h1>{{ area.name }}</h1>
+      <div class="meta">
+        {{ articles|length }} retained article{{ '' if articles|length == 1 else 's' }} &middot;
+        threshold {{ threshold }}/100 &middot; borderline within &plusmn;{{ borderline_band }} &middot;
+        generated {{ generated_at }}
+      </div>
+      {% if sections %}
+      <div class="summary">
+        {% set ns = namespace(strong=0, mod=0, low=0, borderline=0) %}
+        {% for art in articles if art.screening %}
+          {% if art.screening.score >= 80 %}{% set ns.strong = ns.strong + 1 %}
+          {% elif art.screening.score >= 60 %}{% set ns.mod = ns.mod + 1 %}
+          {% else %}{% set ns.low = ns.low + 1 %}{% endif %}
+          {% if art.screening.score >= threshold - borderline_band and art.screening.score < threshold + borderline_band %}
+          {% set ns.borderline = ns.borderline + 1 %}{% endif %}
+        {% endfor %}
+        <span><b>{{ ns.strong }}</b> strong (80&ndash;100)</span>
+        <span><b>{{ ns.mod }}</b> moderate (60&ndash;79)</span>
+        {% if ns.low %}<span><b>{{ ns.low }}</b> low (&lt;60)</span>{% endif %}
+        {% if ns.borderline %}<span><b>{{ ns.borderline }}</b> borderline</span>{% endif %}
+        <span><b>{{ sections|length }}</b> search term{{ '' if sections|length == 1 else 's' }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if sections %}
+    <nav class="toc" aria-label="Sections">
+      <h2>Search terms</h2>
+      <ol>
+        {% for s in sections %}
+        <li>
+          <a href="#term-{{ s.slug }}">
+            <span>{{ s.name }}</span>
+            <span class="count">{{ s.count }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ol>
+    </nav>
+
+    <main>
+      <div class="term-chips" aria-label="Jump to term">
+        {% for s in sections %}
+        <a href="#term-{{ s.slug }}">{{ s.name }} ({{ s.count }})</a>
+        {% endfor %}
+      </div>
+
+      {% for s in sections %}
+      <section class="term" id="term-{{ s.slug }}">
+        <div class="term-head">
+          <h2>{{ s.name }}</h2>
+          <span class="n">{{ s.count }} article{{ '' if s.count == 1 else 's' }}</span>
+        </div>
+
+        {% for art in s.articles %}
+          {% set scr = art.screening %}
+          {% set band = 'band-strong' if (scr and scr.score >= 80) else ('band-moderate' if (scr and scr.score >= 60) else ('band-low' if scr else '')) %}
+          {% set is_borderline = scr and (scr.score >= threshold - borderline_band) and (scr.score < threshold + borderline_band) %}
+          {% set takeaway = (scr.key_takeaway if (scr and scr.key_takeaway) else (art.action_points[0].text if art.action_points else None)) %}
+        <article class="card {{ band }}{{ ' is-borderline' if is_borderline else '' }}">
+          <div class="card-top">
+            <div class="badges">
+              {% if scr %}
+                <span class="score {{ band }}">{{ scr.score }}</span>
+                <span class="chip {{ scr.category|replace(' ', '-') }}">{{ scr.category }}</span>
+                {% if is_borderline %}<span class="flag-borderline" title="within ±{{ borderline_band }} of the {{ threshold }} threshold">borderline</span>{% endif %}
+              {% endif %}
+            </div>
+            <div class="doi">
+              {% if art.doi %}DOI: <a href="https://doi.org/{{ art.doi }}">{{ art.doi }}</a>{% endif %}
+            </div>
+          </div>
+
+          <h3 class="title">{{ art.title or "(no title)" }}</h3>
+          <div class="citation">{{ art.citation }}</div>
+
+          {% if takeaway %}
+          <div class="takeaway">
+            <span class="label">Key takeaway</span>
+            {{ takeaway }}
+          </div>
+          {% endif %}
+
+          {% if scr %}
+          <p class="why"><span class="label">Why this matters:</span> {{ scr.rationale }}</p>
+          {% endif %}
+
+          {% if art.action_points %}
+          <ul class="points">
+            {% for ap in art.action_points %}
+            <li>{{ ap.text }}<span class="cat">[{{ ap.category }}]</span></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if art.matched_terms %}
+          <div class="terms-pills" aria-label="Matched by">
+            <span class="pill current">{{ s.name }}</span>
+            {% for t in art.matched_terms if t != s.name %}
+            <span class="pill">also: {{ t }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if art.abstract %}
+          <details class="abstract">
+            <summary aria-expanded="false">Show abstract</summary>
+            <div class="abstract-body">{{ art.abstract }}</div>
+          </details>
+          {% endif %}
+
+          <div class="card-actions">
+            <button class="btn-copy" type="button"
+              data-citation="{{ art.citation }}{% if art.doi %} https://doi.org/{{ art.doi }}{% endif %}"
+              aria-label="Copy citation">Copy citation</button>
+          </div>
+        </article>
+        {% endfor %}
+      </section>
+      {% endfor %}
+    </main>
+    {% else %}
+    <main><p class="empty">No articles retained for this area in the latest run.</p></main>
+    {% endif %}
   </div>
 
-  {% if articles %}
-    {% for art in articles %}
-    <article>
-      <header>
-        <div>
-          <div class="citation">{{ art.citation }}</div>
-          <div class="title">{{ art.title or "(no title)" }}</div>
-          {% if art.doi %}<div class="doi">DOI: <a href="https://doi.org/{{ art.doi }}">{{ art.doi }}</a></div>{% endif %}
-        </div>
-        <div>
-          {% if art.screening %}
-            <span class="badge score">{{ art.screening.score }}</span>
-            <span class="badge {{ art.screening.category|replace(' ', '-') }}">{{ art.screening.category }}</span>
-          {% endif %}
-        </div>
-      </header>
+  <script>
+    // Copy-citation: copy the data-citation string to the clipboard and give
+    // brief visual confirmation. No external dependencies.
+    document.querySelectorAll('.btn-copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-citation') || '';
+        var done = function () {
+          var prev = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(function () { btn.textContent = prev; btn.classList.remove('copied'); }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {});
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
+    });
 
-      {% if art.abstract %}<p class="abstract">{{ art.abstract }}</p>{% endif %}
+    // Keep the <details> summary's aria-expanded in sync (for older browsers).
+    document.querySelectorAll('details.abstract').forEach(function (d) {
+      var sync = function () { d.querySelector('summary').setAttribute('aria-expanded', d.open ? 'true' : 'false'); };
+      d.addEventListener('toggle', sync); sync();
+    });
 
-      {% if art.screening %}<p class="rationale">{{ art.screening.rationale }}</p>{% endif %}
-
-      {% if art.action_points %}
-      <ul class="action-points">
-        {% for ap in art.action_points %}
-        <li>{{ ap.text }} <span class="cat">[{{ ap.category }}]</span></li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-    </article>
-    {% endfor %}
-  {% else %}
-    <p class="empty">No articles retained for this area in the latest run.</p>
-  {% endif %}
+    // Before printing, open all collapsed abstracts so print-to-PDF shows them.
+    // Restore the previous state afterwards so the on-screen view is unchanged.
+    (function () {
+      var snapshot = [];
+      window.addEventListener('beforeprint', function () {
+        snapshot = [];
+        document.querySelectorAll('details.abstract').forEach(function (d) {
+          snapshot.push(d.open);
+          d.open = true;
+        });
+      });
+      window.addEventListener('afterprint', function () {
+        document.querySelectorAll('details.abstract').forEach(function (d, i) {
+          if (typeof snapshot[i] !== 'undefined') d.open = snapshot[i];
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
