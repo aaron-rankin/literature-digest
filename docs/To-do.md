@@ -25,3 +25,4 @@
 ---
 ## New ideas
 [] - overhaul report UI to make reports sleeker, more digestible, and more presentable (subtask 12)
+[] - change `--limit` from area-wide to per-search-term so dry runs exercise every term (subtask 13)

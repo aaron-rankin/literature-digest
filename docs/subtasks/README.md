@@ -69,6 +69,7 @@ touched, and acceptance criteria.
 06 model tiering (--fast + test DB) ─> 07 screenings persistence ─> 08 determinism eval + borderline
 05 matched_terms ──> 11 local offline source mode (fixtures; pairs with 06 --fast)
 05 matched_terms + 08 borderline ──> 12 report UI overhaul
+05 matched_terms ──> 13 per-term --limit (round-robin screening)
 09 robustness + cleanup + docs (spans all)
 10 containerisation (deferred)
 ```
@@ -77,6 +78,12 @@ touched, and acceptance criteria.
 with **no external API calls** (`--local`), optionally with a local Ollama model
 (`--fast`), so the LLM/report stages can be iterated without burning Scopus quota
 or LLM tokens. Includes a `--capture` step to build fixtures from one real run.
+
+**13 — Per-term `--limit`.** Change `--limit N` from an area-wide cap on unseen
+articles to a **per-search-term** cap (up to N articles per `Article.matched_terms`
+bucket within an area), so dry runs exercise every term and the report shows all
+term sections instead of only the first. Unblocks meaningful `--limit 5` UI dry
+runs against live Scopus data.
 
 ## Suggested sequencing
 
@@ -92,3 +99,5 @@ or LLM tokens. Includes a `--capture` step to build fixtures from one real run.
 9. **10** — containerise last.
 10. **12** — report UI overhaul (after 05 + 08 so grouping and borderline flags
     can be designed in).
+11. **13** — per-term `--limit`; pull forward whenever the flat-cap behaviour
+    blocks a dry run (pairs well with 12 for verifying the report end-to-end).
