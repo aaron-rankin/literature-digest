@@ -70,6 +70,7 @@ touched, and acceptance criteria.
 05 matched_terms ──> 11 local offline source mode (fixtures; pairs with 06 --fast)
 05 matched_terms + 08 borderline ──> 12 report UI overhaul
 05 matched_terms ──> 13 per-term --limit (round-robin screening)
+12 report UI overhaul ──> 14 dedup report + term filter buttons (revises 12 Q3)
 09 robustness + cleanup + docs (spans all)
 10 containerisation (deferred)
 ```
@@ -84,6 +85,14 @@ articles to a **per-search-term** cap (up to N articles per `Article.matched_ter
 bucket within an area), so dry runs exercise every term and the report shows all
 term sections instead of only the first. Unblocks meaningful `--limit 5` UI dry
 runs against live Scopus data.
+
+**14 — Deduplicated report with term filter buttons.** Stop duplicating article
+cards across per-term sections (revises subtask 12's Q3 decision): render each
+retained article **once** in a flat, score-ordered list tagged with pills for
+every matched search term, and add a row of filter buttons along the top (one
+per term + "All") that filters the list client-side by term via `data-terms`
+attributes + URL-hash state. Removes the sticky sidebar and mobile term-chip
+row; keeps subtask 12's card styling, borderline flag, and print stylesheet.
 
 ## Suggested sequencing
 
@@ -101,3 +110,6 @@ runs against live Scopus data.
     can be designed in).
 11. **13** — per-term `--limit`; pull forward whenever the flat-cap behaviour
     blocks a dry run (pairs well with 12 for verifying the report end-to-end).
+12. **14** — dedup report + term filter buttons; lands after 12 (rewrites its
+    section UI) and benefits from 13 (per-term cap populates every term so the
+    filter buttons have something to filter).
