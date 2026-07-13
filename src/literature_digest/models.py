@@ -19,6 +19,10 @@ class ScreeningResult(BaseModel):
     score: int = Field(ge=0, le=100, description="Relevancy score 0-100")
     category: Literal["directly actionable", "monitoring", "background"]
     rationale: str = Field(description="1-2 sentence justification")
+    key_takeaway: str | None = Field(
+        default=None,
+        description="One-line key takeaway for the report card (falls back to first action point)",
+    )
 
 
 class ActionPoint(BaseModel):

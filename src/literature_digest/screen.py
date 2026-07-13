@@ -37,6 +37,7 @@ SCREEN_SCHEMA = {
             "enum": ["directly actionable", "monitoring", "background"],
         },
         "rationale": {"type": "string"},
+        "key_takeaway": {"type": "string"},
     },
     "required": ["score", "category", "rationale"],
 }
@@ -60,7 +61,9 @@ as one of:
 - background         : contextual only
 
 Return JSON with keys: score (int 0-100), category (one of the three),
-rationale (1-2 sentence string)."""
+rationale (1-2 sentence string), and key_takeaway (a single concise sentence
+summarising the most important practical takeaway for a coach or sports
+scientist)."""
 
 
 class LLMClient:
