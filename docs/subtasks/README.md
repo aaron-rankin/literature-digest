@@ -68,6 +68,7 @@ touched, and acceptance criteria.
                                          └───────────────> 05 matched-terms + report grouping <┘
 06 model tiering (--fast + test DB) ─> 07 screenings persistence ─> 08 determinism eval + borderline
 05 matched_terms ──> 11 local offline source mode (fixtures; pairs with 06 --fast)
+05 matched_terms + 08 borderline ──> 12 report UI overhaul
 09 robustness + cleanup + docs (spans all)
 10 containerisation (deferred)
 ```
@@ -89,3 +90,5 @@ or LLM tokens. Includes a `--capture` step to build fixtures from one real run.
    life win for debugging 06–08 cheaply. Consider pulling it early.
 8. **09** — robustness/cleanup/docs pass once the above lands.
 9. **10** — containerise last.
+10. **12** — report UI overhaul (after 05 + 08 so grouping and borderline flags
+    can be designed in).
