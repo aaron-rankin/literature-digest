@@ -57,12 +57,21 @@ def cmd_list_areas(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    sources: set[str] | None = None
+    if args.sources:
+        sources = {s.strip().lower() for s in args.sources.split(",")}
+        valid = {"scopus", "openalex", "crossref", "email"}
+        invalid = sources - valid
+        if invalid:
+            console.print(f"[bold red]Invalid source(s): {', '.join(sorted(invalid))}[/]")
+            return 1
     index_path = run_all(
         only_area=args.area,
         limit=args.limit,
         debug=args.debug,
         local=args.local,
         fast=args.fast,
+        sources=sources,
     )
     if args.open:
         webbrowser.open(f"file://{index_path.resolve()}")
@@ -178,6 +187,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use the configured fast/local LLM and write to state.test.db "
         "(prod scores are never touched).",
+    )
+    p_run.add_argument(
+        "--sources",
+        default="",
+        help="Comma-separated list of sources to use in non-local mode. "
+        "Choices: scopus, openalex, crossref, email. Default: all.",
     )
     p_run.set_defaults(func=cmd_run)
 

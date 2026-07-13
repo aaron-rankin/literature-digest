@@ -65,8 +65,13 @@ def run_area(
     debug: bool = False,
     local: bool = False,
     local_source: LocalSource | None = None,
+    sources: set[str] | None = None,
 ) -> list[Article]:
-    """Run the full pipeline for a single area. Returns retained articles."""
+    """Run the full pipeline for a single area. Returns retained articles.
+
+    ``sources`` restricts which network sources are used in non-local mode.
+    Defaults to all sources. Local mode ignores this and uses fixtures only.
+    """
     last_run = store.get_last_run(area.slug)
     run_id = store.start_run(area.slug)
     console.print(f"[bold blue]#{area.slug}[/] since={last_run or 'first run'}")
@@ -83,10 +88,14 @@ def run_area(
             all_articles.extend(fetched)
             console.print(f"  [magenta]local[/] {term.name}: {len(fetched)}")
     else:
-        from_email = _safe_fetch(
-            "scopus_email", lambda: email_source.fetch_articles(area, last_run)
-        )
-        _tag_area(from_email, area.slug)
+        sources = sources or {"scopus", "openalex", "crossref", "email"}
+
+        from_email: list[Article] = []
+        if "email" in sources:
+            from_email = _safe_fetch(
+                "scopus_email", lambda: email_source.fetch_articles(area, last_run)
+            )
+            _tag_area(from_email, area.slug)
 
         lookback = areas_file.lookback_days()
         first_run_lookback = areas_file.first_run_lookback_days()
@@ -102,29 +111,40 @@ def run_area(
             sq = SourceQuery(term_name=term.name, parsed=term.parsed, area_slug=area.slug)
 
             console.print(f"  [dim]{term.name}[/] query={sq.parsed.terms}")
-            from_scopus = _safe_fetch(
-                f"scopus/{term.name}",
-                lambda sq=sq, window=window: scopus_api.search(sq, window),
-            )
-            from_openalex = _safe_fetch(
-                f"openalex/{term.name}",
-                lambda sq=sq, window=window: openalex.search(sq, window),
-            )
-            from_crossref = _safe_fetch(
-                f"crossref/{term.name}",
-                lambda sq=sq, window=window: crossref.search(sq, window),
-            )
-            console.print(
-                f"    fetched: scopus={len(from_scopus)} openalex={len(from_openalex)} "
-                f"crossref={len(from_crossref)}"
-            )
-            all_articles.extend(from_scopus + from_openalex + from_crossref)
+            counts: dict[str, int] = {}
+            if "scopus" in sources:
+                from_scopus = _safe_fetch(
+                    f"scopus/{term.name}",
+                    lambda sq=sq, window=window: scopus_api.search(sq, window),
+                )
+                all_articles.extend(from_scopus)
+                counts["scopus"] = len(from_scopus)
+            if "openalex" in sources:
+                from_openalex = _safe_fetch(
+                    f"openalex/{term.name}",
+                    lambda sq=sq, window=window: openalex.search(sq, window),
+                )
+                all_articles.extend(from_openalex)
+                counts["openalex"] = len(from_openalex)
+            if "crossref" in sources:
+                from_crossref = _safe_fetch(
+                    f"crossref/{term.name}",
+                    lambda sq=sq, window=window: crossref.search(sq, window),
+                )
+                all_articles.extend(from_crossref)
+                counts["crossref"] = len(from_crossref)
 
-        # Enrich email-extracted DOIs via Scopus API + OpenAlex fallback.
+            console.print("    fetched: " + " ".join(f"{k}={v}" for k, v in counts.items()))
+
+        # Enrich email-extracted DOIs via enabled sources.
         enriched = []
         for stub in from_email:
             if stub.doi:
-                art = scopus_api.enrich(stub.doi) or openalex.enrich(stub.doi) or stub
+                art = stub
+                if "scopus" in sources:
+                    art = scopus_api.enrich(stub.doi) or art
+                if "openalex" in sources and art is stub:
+                    art = openalex.enrich(stub.doi) or art
                 enriched.append(art)
             else:
                 enriched.append(stub)
@@ -199,6 +219,7 @@ def run_all(
     debug: bool = False,
     local: bool = False,
     fast: bool = False,
+    sources: set[str] | None = None,
 ) -> Path:
     """Run the pipeline for every configured area and render reports.
 
@@ -208,6 +229,9 @@ def run_all(
 
     ``fast=True`` swaps in ``settings.lit_fast_model`` and writes to
     ``state.test.db`` so test scores never mix with prod scores.
+
+    ``sources`` restricts which network sources to use in non-local mode
+    (e.g. ``{"scopus"}`` for a Scopus-only run). Ignored when ``local=True``.
     """
     settings = settings or Settings()
     areas_file = load_areas(settings.areas_config)
@@ -263,6 +287,7 @@ def run_all(
                 debug=debug,
                 local=local,
                 local_source=local_source,
+                sources=sources,
             )
             renderer.render_area(area, retained, threshold)
             index_rows.append(
