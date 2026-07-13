@@ -98,12 +98,9 @@ class Store:
         self._conn.commit()
         return int(cur.lastrowid)
 
-    def finish_run(
-        self, run_id: int, *, ingested: int, retained: int, dropped: int
-    ) -> None:
+    def finish_run(self, run_id: int, *, ingested: int, retained: int, dropped: int) -> None:
         self._conn.execute(
-            "UPDATE runs SET finished_at = ?, ingested = ?, retained = ?, dropped = ? "
-            "WHERE id = ?",
+            "UPDATE runs SET finished_at = ?, ingested = ?, retained = ?, dropped = ? WHERE id = ?",
             (datetime.now(UTC).isoformat(), ingested, retained, dropped, run_id),
         )
         self._conn.commit()

@@ -1,14 +1,13 @@
 """OpenAlex API client (free, no key, polite pool via mailto).
 
 Contract:
-    search(area: AreaConfig, since: datetime | None) -> list[Article]
+    search(source_query: SourceQuery, window: DateWindow) -> list[Article]
     enrich(doi: str) -> Article | None
 
-Uses `https://api.openalex.org/works` with `mailto=` in the query string to join
-the polite pool (faster, more reliable rate limits). Keyword search uses the
-boolean `search` parameter (OR of the area's quoted keywords) plus a
-`from_publication_date` filter. Abstracts are reconstructed from OpenAlex's
-`abstract_inverted_index` back into prose.
+Uses ``https://api.openalex.org/works`` with ``mailto=`` in the query string to
+join the polite pool. The pipeline now calls this once per search term, so the
+query is rendered from the parsed Scopus-subset tree and the crawl window uses
+``from_created_date`` while ``PUBYEAR`` maps to ``from_publication_date``.
 """
 
 from __future__ import annotations
@@ -18,8 +17,9 @@ from typing import Any
 
 import httpx
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import Settings
 from literature_digest.models import Article
+from literature_digest.query import DateWindow, QueryTranslator, SourceQuery
 from literature_digest.sources.dedupe import normalize_doi
 
 _SOURCE = "openalex"
@@ -34,29 +34,16 @@ class OpenAlexSource:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._translator = QueryTranslator()
 
     # ── public API ─────────────────────────────────────────────────────────
-    def search(self, area: AreaConfig, since: datetime | None) -> list[Article]:
-        """Search OpenAlex for `area.keywords` published since `since`."""
-        params: dict[str, Any] = {
-            "search": _boolean_query(area.keywords),
-            "per-page": _PER_PAGE,
-            "cursor": "*",
-        }
-        if since is not None:
-            params["filter"] = f"from_publication_date:{since.date().isoformat()}"
+    def search(self, source_query: SourceQuery, window: DateWindow) -> list[Article]:
+        """Search OpenAlex for a single term and return parsed articles."""
+        params = self._translator.to_openalex(source_query, window)
         self._add_mailto(params)
-
-        articles: list[Article] = []
-        with httpx.Client(timeout=_TIMEOUT, headers=self._headers()) as client:
-            while True:
-                data = self._get(client, self.BASE_URL, params)
-                results = data.get("results", [])
-                articles.extend(_parse_work(w) for w in results)
-                next_cursor = (data.get("meta") or {}).get("next_cursor")
-                if not results or not next_cursor:
-                    break
-                params["cursor"] = next_cursor
+        articles = self._search_params(params)
+        for art in articles:
+            art.matched_terms = [source_query.term_name]
         return articles
 
     def enrich(self, doi: str) -> Article | None:
@@ -75,11 +62,21 @@ class OpenAlexSource:
             return _parse_work(resp.json())
 
     # ── helpers ────────────────────────────────────────────────────────────
-    @staticmethod
-    def _get(client: httpx.Client, url: str, params: dict[str, Any]) -> dict[str, Any]:
-        resp = client.get(url, params=params)
-        resp.raise_for_status()
-        return resp.json()
+    def _search_params(self, params: dict[str, Any]) -> list[Article]:
+        """Paginate through an OpenAlex params dict."""
+        articles: list[Article] = []
+        with httpx.Client(timeout=_TIMEOUT, headers=self._headers()) as client:
+            while True:
+                resp = client.get(self.BASE_URL, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                results = data.get("results", [])
+                articles.extend(_parse_work(w) for w in results)
+                next_cursor = (data.get("meta") or {}).get("next_cursor")
+                if not results or not next_cursor:
+                    break
+                params["cursor"] = next_cursor
+        return articles
 
     def _add_mailto(self, params: dict[str, Any]) -> None:
         if self.settings.contact_email:
@@ -90,18 +87,13 @@ class OpenAlexSource:
 
 
 # ── module-level parsing helpers ───────────────────────────────────────────
-def _boolean_query(keywords: list[str]) -> str:
-    """OR of quoted keyword phrases for OpenAlex's boolean `search` param."""
-    return " OR ".join(f'"{kw}"' for kw in keywords)
-
-
 def _user_agent(settings: Settings) -> str:
     contact = f" (mailto:{settings.contact_email})" if settings.contact_email else ""
     return f"literature-digest/0.1{contact}"
 
 
 def _reconstruct_abstract(inverted: dict[str, list[int]] | None) -> str | None:
-    """Rebuild prose from OpenAlex's `abstract_inverted_index` (word -> positions)."""
+    """Rebuild prose from OpenAlex's ``abstract_inverted_index``."""
     if not inverted:
         return None
     positions: dict[int, str] = {}
@@ -114,7 +106,7 @@ def _reconstruct_abstract(inverted: dict[str, list[int]] | None) -> str | None:
 
 
 def _parse_work(work: dict[str, Any]) -> Article:
-    """Map an OpenAlex `work` object onto our Article model."""
+    """Map an OpenAlex ``work`` object onto our Article model."""
     authors = [
         a["author"]["display_name"]
         for a in work.get("authorships", [])

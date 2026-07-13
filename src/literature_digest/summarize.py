@@ -61,9 +61,7 @@ class Summarizer:
 
     def summarize(self, article: Article, org_context: str) -> list[ActionPoint]:
         """Return up to 3 deduplicated ActionPoints for `article`."""
-        rationale = (
-            article.screening.rationale if article.screening else "No screening yet."
-        )
+        rationale = article.screening.rationale if article.screening else "No screening yet."
         data = self.client.complete_json(
             SUMMARIZE_PROMPT.format(
                 org_context=org_context,

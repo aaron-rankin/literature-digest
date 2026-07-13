@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import httpx
 import pytest
 import respx
 
-from literature_digest.config import AreaConfig, Settings
+from literature_digest.config import AreaConfig, LoadedArea, SearchTerm, Settings
+from literature_digest.query import DateWindow, SourceQuery, parse
 from literature_digest.sources.crossref import CrossrefSource
 from literature_digest.sources.openalex import OpenAlexSource
 
@@ -19,12 +21,39 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def area() -> AreaConfig:
-    return AreaConfig(
-        slug="sports-nutrition",
-        name="Sports Nutrition",
-        keywords=["sports nutrition", "ergogenic aid"],
-        scopus_query="TITLE-ABS-KEY(...)",
+def area() -> LoadedArea:
+    raw = 'TITLE-ABS-KEY("sports nutrition") OR TITLE-ABS-KEY("ergogenic aid")'
+    return LoadedArea(
+        config=AreaConfig(
+            slug="sports-nutrition",
+            name="Sports Nutrition",
+            threshold=50,
+        ),
+        terms=[
+            SearchTerm(
+                name="sports-nutrition",
+                raw_query=raw,
+                path=Path("/tmp/sports-nutrition.txt"),
+                parsed=parse(raw, term_name="sports-nutrition"),
+            ),
+        ],
+    )
+
+
+@pytest.fixture
+def source_query(area: LoadedArea) -> SourceQuery:
+    return SourceQuery(
+        term_name=area.terms[0].name,
+        parsed=area.terms[0].parsed,
+        area_slug=area.slug,
+    )
+
+
+@pytest.fixture
+def window() -> DateWindow:
+    return DateWindow(
+        crawl_from=datetime(2024, 1, 1),
+        crawl_to=datetime(2024, 12, 31),
     )
 
 
@@ -50,7 +79,7 @@ def _oa_work() -> dict:
 
 @respx.mock
 def test_openalex_search_parses_and_reconstructs_abstract(
-    settings: Settings, area: AreaConfig
+    settings: Settings, source_query: SourceQuery, window: DateWindow
 ) -> None:
     route = respx.get("https://api.openalex.org/works").mock(
         return_value=httpx.Response(
@@ -58,7 +87,7 @@ def test_openalex_search_parses_and_reconstructs_abstract(
         )
     )
 
-    articles = OpenAlexSource(settings).search(area, since=datetime(2024, 1, 1))
+    articles = OpenAlexSource(settings).search(source_query, window)
 
     assert len(articles) == 1
     art = articles[0]
@@ -70,24 +99,37 @@ def test_openalex_search_parses_and_reconstructs_abstract(
     assert art.year == 2024
     assert art.pub_date == datetime(2024, 3, 15)
     assert art.sources == ["openalex"]
+    assert art.matched_terms == [source_query.term_name]
 
-    # Polite pool + date filter went out on the request.
+    # Polite pool + crawl window went out on the request.
     request = route.calls.last.request
     assert "mailto=tester%40example.org" in str(request.url)
-    assert "from_publication_date%3A2024-01-01" in str(request.url)
+    assert "from_created_date%3A2024-01-01" in str(request.url)
+    assert "to_created_date%3A2024-12-31" in str(request.url)
+
+
+def _oa_work2() -> dict:
+    work = _oa_work()
+    work["id"] = "https://openalex.org/W2"
+    work["doi"] = "https://doi.org/10.1/OA2"
+    work["display_name"] = "Second page work"
+    return work
 
 
 @respx.mock
-def test_openalex_search_follows_cursor_pagination(settings: Settings, area: AreaConfig) -> None:
+def test_openalex_search_follows_cursor_pagination(
+    settings: Settings, source_query: SourceQuery
+) -> None:
     page1 = {"results": [_oa_work()], "meta": {"next_cursor": "CURSOR2"}}
-    page2 = {"results": [_oa_work()], "meta": {"next_cursor": None}}
+    page2 = {"results": [_oa_work2()], "meta": {"next_cursor": None}}
     respx.get("https://api.openalex.org/works").mock(
         side_effect=[httpx.Response(200, json=page1), httpx.Response(200, json=page2)]
     )
 
-    articles = OpenAlexSource(settings).search(area, since=None)
+    articles = OpenAlexSource(settings).search(source_query, DateWindow())
 
     assert len(articles) == 2
+    assert {a.doi for a in articles} == {"10.1/oa", "10.1/oa2"}
 
 
 @respx.mock
@@ -112,14 +154,16 @@ def _cr_item() -> dict:
 
 
 @respx.mock
-def test_crossref_search_parses_and_strips_jats(settings: Settings, area: AreaConfig) -> None:
+def test_crossref_search_parses_and_strips_jats(
+    settings: Settings, source_query: SourceQuery, window: DateWindow
+) -> None:
     route = respx.get("https://api.crossref.org/works").mock(
         return_value=httpx.Response(
             200, json={"message": {"items": [_cr_item()], "next-cursor": None}}
         )
     )
 
-    articles = CrossrefSource(settings).search(area, since=datetime(2023, 1, 1))
+    articles = CrossrefSource(settings).search(source_query, window)
 
     assert len(articles) == 1
     art = articles[0]
@@ -131,22 +175,26 @@ def test_crossref_search_parses_and_strips_jats(settings: Settings, area: AreaCo
     assert art.year == 2023
     assert art.pub_date == datetime(2023, 6, 1)
     assert art.sources == ["crossref"]
+    assert art.matched_terms == [source_query.term_name]
 
     request = route.calls.last.request
     assert "mailto=tester%40example.org" in str(request.url)
-    assert "from-pub-date%3A2023-01-01" in str(request.url)
+    assert "from-index-date%3A2024-01-01" in str(request.url)
+    assert "until-index-date%3A2024-12-31" in str(request.url)
     assert "literature-digest" in request.headers["user-agent"]
 
 
 @respx.mock
-def test_crossref_search_follows_cursor_pagination(settings: Settings, area: AreaConfig) -> None:
+def test_crossref_search_follows_cursor_pagination(
+    settings: Settings, source_query: SourceQuery
+) -> None:
     page1 = {"message": {"items": [_cr_item()], "next-cursor": "AoJ..."}}
     page2 = {"message": {"items": [], "next-cursor": "AoJ..."}}
     respx.get("https://api.crossref.org/works").mock(
         side_effect=[httpx.Response(200, json=page1), httpx.Response(200, json=page2)]
     )
 
-    articles = CrossrefSource(settings).search(area, since=None)
+    articles = CrossrefSource(settings).search(source_query, DateWindow())
 
     # Second page is empty -> loop stops; only page-1 item returned.
     assert len(articles) == 1

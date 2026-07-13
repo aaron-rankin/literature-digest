@@ -22,7 +22,7 @@ import re
 from literature_digest.models import Article
 
 # Source precedence: first non-null wins for each field.
-SOURCE_PRECEDENCE = ("scopus_api", "openalex", "crossref", "scopus_email")
+SOURCE_PRECEDENCE = ("scopus", "openalex", "crossref", "scopus_email", "fixture")
 
 # URL / scheme prefixes that may wrap a DOI.
 _DOI_PREFIXES = (
@@ -101,13 +101,18 @@ class Deduper:
             if value is not None:
                 setattr(merged, field, value)
 
-        # Combine provenance in precedence order, de-duplicated.
-        seen: list[str] = []
+        # Combine provenance and matched terms in precedence order, de-duplicated.
+        seen_sources: list[str] = []
+        seen_terms: list[str] = []
         for m in ranked:
             for src in m.sources:
-                if src not in seen:
-                    seen.append(src)
-        merged.sources = seen
+                if src not in seen_sources:
+                    seen_sources.append(src)
+            for term in m.matched_terms:
+                if term not in seen_terms:
+                    seen_terms.append(term)
+        merged.sources = seen_sources
+        merged.matched_terms = seen_terms
         return merged
 
     @staticmethod

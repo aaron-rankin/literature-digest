@@ -1,0 +1,100 @@
+[
+  {
+    "doi": "10.9999/fake.data_science.spatiotemporal.1",
+    "title": "Validating spatiotemporal pitch occupation against match outcomes in elite football",
+    "abstract": "We analysed a full competitive season of first-team matches to test whether spatiotemporal pitch occupation derived from temporal synchronisation index predicts match outcomes. Using data from an elite men's league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.",
+    "authors": [
+      "Virtanen, E.",
+      "Ubeda, H."
+    ],
+    "journal": "Journal of Sports Sciences",
+    "year": 2024,
+    "pub_date": "2024-12-15T00:00:00Z",
+    "matched_terms": [
+      "spatiotemporal"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.spatiotemporal.2",
+    "title": "A practitioner workflow for space-time interaction using Voronoi space control",
+    "abstract": "This applied study describes and evaluates a workflow that turns raw Voronoi space control into coach-facing space-time interaction summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.",
+    "authors": [
+      "Sundqvist, C.",
+      "Rasmussen, C.",
+      "Tanaka, G.",
+      "Mbeki, K."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2024,
+    "pub_date": "2024-09-19T00:00:00Z",
+    "matched_terms": [
+      "spatiotemporal"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.spatiotemporal.3",
+    "title": "A graph-neural approach to modelling space-time interaction from space-generation rate",
+    "abstract": "We propose a graph-neural architecture that learns space-time interaction representations from space-generation rate. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.",
+    "authors": [
+      "Tanaka, J.",
+      "Tanaka, B.",
+      "Novak, E.",
+      "Tanaka, L."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2025,
+    "pub_date": "2025-01-24T00:00:00Z",
+    "matched_terms": [
+      "spatiotemporal"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.spatiotemporal.4",
+    "title": "Sensitivity of space-time interaction estimates to convex-hull surface area sampling frequency",
+    "abstract": "This methodological paper quantifies how space-time interaction estimates vary with the sampling frequency of convex-hull surface area. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.",
+    "authors": [
+      "Sundqvist, K.",
+      "Rasmussen, A.",
+      "Tanaka, F.",
+      "Oyelaran, J."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2025,
+    "pub_date": "2025-08-02T00:00:00Z",
+    "matched_terms": [
+      "spatiotemporal"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.spatiotemporal.5",
+    "title": "spatiotemporal pitch occupation in recreational five-a-side players: an exploratory study",
+    "abstract": "We explored spatiotemporal pitch occupation using space-generation rate in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.",
+    "authors": [
+      "Petrov, G.",
+      "Sundqvist, H.",
+      "Novak, C.",
+      "Tanaka, G."
+    ],
+    "journal": "European Journal of Sport Science",
+    "year": 2024,
+    "pub_date": "2024-05-05T00:00:00Z",
+    "matched_terms": [
+      "spatiotemporal"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  }
+]

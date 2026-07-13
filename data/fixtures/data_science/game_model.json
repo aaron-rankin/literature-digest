@@ -1,0 +1,97 @@
+[
+  {
+    "doi": "10.9999/fake.data_science.game_model.1",
+    "title": "Validating positional play framework against match outcomes in elite football",
+    "abstract": "We analysed a full competitive season of first-team matches to test whether positional play framework derived from possession-chain value predicts match outcomes. Using data from an elite men's league, the model explained a meaningful share of variance in goal difference and was robust across opponents. The approach is directly usable by performance analysts to prepare opposition reports within the weekly training cycle.",
+    "authors": [
+      "Mbeki, B.",
+      "Ubeda, B.",
+      "Rasmussen, J.",
+      "Mbeki, I."
+    ],
+    "journal": "International Journal of Performance Analysis in Sport",
+    "year": 2025,
+    "pub_date": "2025-01-03T00:00:00Z",
+    "matched_terms": [
+      "game_model"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.game_model.2",
+    "title": "A practitioner workflow for playing-model adherence using positional compactness index",
+    "abstract": "This applied study describes and evaluates a workflow that turns raw positional compactness index into coach-facing playing-model adherence summaries for an elite academy-to-first-team pathway. Across 30 matches the outputs agreed with expert coach ratings and shortened analysis turnaround, supporting adoption in a professional setting.",
+    "authors": [
+      "Novak, I.",
+      "Sundqvist, A."
+    ],
+    "journal": "European Journal of Sport Science",
+    "year": 2024,
+    "pub_date": "2024-02-08T00:00:00Z",
+    "matched_terms": [
+      "game_model"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.game_model.3",
+    "title": "A graph-neural approach to modelling structured possession model from expected threat",
+    "abstract": "We propose a graph-neural architecture that learns structured possession model representations from expected threat. On a benchmark of simulated possessions the method improves reconstruction error over baselines. Translation to applied decision-making is not evaluated here and would require validation in a live performance environment.",
+    "authors": [
+      "Petrov, A.",
+      "Ubeda, C."
+    ],
+    "journal": "Journal of Sports Sciences",
+    "year": 2025,
+    "pub_date": "2025-07-05T00:00:00Z",
+    "matched_terms": [
+      "game_model"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.game_model.4",
+    "title": "Sensitivity of structured possession model estimates to expected threat sampling frequency",
+    "abstract": "This methodological paper quantifies how structured possession model estimates vary with the sampling frequency of expected threat. We report substantial bias below 10 Hz. The work is primarily technical and does not test performance outcomes, but informs data-quality requirements for analytics pipelines.",
+    "authors": [
+      "Wojcik, C.",
+      "Novak, J.",
+      "Virtanen, K.",
+      "Petrov, F."
+    ],
+    "journal": "Journal of Sports Analytics",
+    "year": 2025,
+    "pub_date": "2025-09-23T00:00:00Z",
+    "matched_terms": [
+      "game_model"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  },
+  {
+    "doi": "10.9999/fake.data_science.game_model.5",
+    "title": "team game model in recreational five-a-side players: an exploratory study",
+    "abstract": "We explored team game model using expected threat in a sample of recreational five-a-side players. Given the non-elite population, small pitch, and absence of a performance intervention, the findings are contextual only and unlikely to transfer to professional match preparation.",
+    "authors": [
+      "Wojcik, I.",
+      "Sundqvist, F.",
+      "Tanaka, J."
+    ],
+    "journal": "Frontiers in Sports Modelling",
+    "year": 2024,
+    "pub_date": "2024-06-10T00:00:00Z",
+    "matched_terms": [
+      "game_model"
+    ],
+    "sources": [
+      "fixture"
+    ]
+  }
+]
