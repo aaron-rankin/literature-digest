@@ -6,26 +6,38 @@
   <title>Literature Digest</title>
   <style>
     :root {
-      --bg: #fafafa; --fg: #1f2937; --muted: #6b7280;
-      --border: #e5e7eb; --accent: #2563eb;
-      --actionable: #16a34a; --monitoring: #ca8a04; --background: #6b7280;
+      --bg: #f8fafc; --surface: #ffffff; --fg: #0f172a; --muted: #64748b;
+      --border: #e2e8f0; --accent: #2563eb; --accent-soft: #eff6ff;
+      --radius: 0.625rem; --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
     }
+    * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-           background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; }
-    h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; }
-    .meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 1.5rem; }
+           background: var(--bg); color: var(--fg); margin: 0; padding: 2rem;
+           max-width: 52rem; -webkit-font-smoothing: antialiased; }
+    h1 { margin: 0 0 .3rem; font-size: 1.6rem; letter-spacing: -0.01em; }
+    .meta { color: var(--muted); font-size: .85rem; margin-bottom: 1.75rem; }
+    .card { background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     table { border-collapse: collapse; width: 100%; }
-    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
-    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--border); }
+    thead th { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+               color: var(--muted); background: var(--bg); }
+    tbody tr:last-child td { border-bottom: none; }
     td a { color: var(--accent); text-decoration: none; }
     td a:hover { text-decoration: underline; }
     .count { font-variant-numeric: tabular-nums; }
+    .empty { color: var(--muted); font-style: italic; }
+    @media print {
+      body { background: #fff; } .card { box-shadow: none; }
+      a { color: var(--fg); }
+    }
   </style>
 </head>
 <body>
   <h1>Literature Digest</h1>
-  <div class="meta">Bi-weekly research digest for elite-sports performance &middot; generated 2026-07-09 12:26</div>
+  <div class="meta">Bi-weekly research digest for elite-sports performance &middot; generated 2026-07-13 16:59</div>
 
+  <div class="card">
   <table>
     <thead>
       <tr>
@@ -40,11 +52,12 @@
       <tr>
         <td>Data Science</td>
         <td>never</td>
-        <td class="count">0</td>
+        <td class="count">19</td>
         <td class="count">55</td>
         <td><a href="areas/data_science.html">view report &rarr;</a></td>
       </tr>
     </tbody>
   </table>
+  </div>
 </body>
 </html>

@@ -1,8 +1,9 @@
 """Tests for the report renderer and templates.
 
-Structure assertions cover the key elements of the restyled area report (term
-headings, card count, borderline class, key-takeaway element, copy button) plus
-a representative fragment snapshot of an article card and a term section.
+Structure assertions cover the key elements of the deduplicated area report
+(filter buttons, one card per unique article, data-terms attributes, term pills,
+borderline flag, key-takeaway element, copy button, filter JS) plus
+representative fragment snapshots of a filter button and an article card.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import pytest
 
 from literature_digest.config import AreaConfig
 from literature_digest.models import ActionPoint, Article, ScreeningResult
-from literature_digest.report import AreaIndexRow, ReportRenderer, build_term_sections
+from literature_digest.report import AreaIndexRow, ReportRenderer, build_filterable_articles
 
 REPO_TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
 
@@ -90,34 +91,36 @@ def renderer(tmp_path: Path) -> ReportRenderer:
     return ReportRenderer(templates_dir=REPO_TEMPLATES, output_dir=tmp_path / "reports")
 
 
-# ── build_term_sections ───────────────────────────────────────────────────────
+# ── build_filterable_articles ────────────────────────────────────────────────
 
 
-def test_build_term_sections_groups_by_matched_term() -> None:
-    sections = build_term_sections(_sample_articles())
-    names = [s.name for s in sections]
-    # Distinct terms in first-seen order, with an "Other" bucket for untagged work.
-    assert names == ["game_model", "style_of_play", "tracking_data", "Other"]
-
-
-def test_build_term_sections_duplicates_under_each_term() -> None:
-    sections = build_term_sections(_sample_articles())
-    buckets = {s.name: s.articles for s in sections}
-    # The strong article matches two terms and must appear under both.
-    titles_game_model = {a.title for a in buckets["game_model"]}
-    titles_style = {a.title for a in buckets["style_of_play"]}
-    assert "Strong paper on game models" in titles_game_model
-    assert "Strong paper on game models" in titles_style
-
-
-def test_build_term_sections_sorts_by_score_descending_within_term() -> None:
-    sections = build_term_sections(_sample_articles())
-    tracking = next(s for s in sections if s.name == "tracking_data")
-    scores = [a.screening.score for a in tracking.articles if a.screening]
+def test_build_filterable_articles_sorts_globally_by_score() -> None:
+    sorted_articles, _terms = build_filterable_articles(_sample_articles())
+    scores = [a.screening.score for a in sorted_articles if a.screening]
     assert scores == sorted(scores, reverse=True)
-    # No duplicate of the same article inside one term bucket.
-    dois = [a.doi for a in tracking.articles]
-    assert len(dois) == len(set(dois))
+    # Unscored articles sort last.
+    assert sorted_articles[-1].screening is None
+
+
+def test_build_filterable_articles_term_counts_dedup_multi_term() -> None:
+    _sorted, terms = build_filterable_articles(_sample_articles())
+    by_name = {t.name: t.count for t in terms}
+    # Terms in first-seen order: game_model, style_of_play, tracking_data, Other.
+    assert [t.name for t in terms] == ["game_model", "style_of_play", "tracking_data", "Other"]
+    # The multi-term (strong) article counts toward both game_model and style_of_play.
+    assert by_name["game_model"] == 1
+    assert by_name["style_of_play"] == 1
+    # tracking_data holds the moderate + borderline articles.
+    assert by_name["tracking_data"] == 2
+    # Untagged article falls under Other.
+    assert by_name["Other"] == 1
+
+
+def test_build_filterable_articles_returns_unique_articles() -> None:
+    sorted_articles, _terms = build_filterable_articles(_sample_articles())
+    dois = [a.doi for a in sorted_articles]
+    # No duplicates even though the strong article matches two terms.
+    assert len(dois) == len(set(dois)) == 4
 
 
 # ── render_area structure ────────────────────────────────────────────────────
@@ -128,32 +131,63 @@ def _area_html(renderer: ReportRenderer) -> str:
     return out.read_text(encoding="utf-8")
 
 
-def test_area_report_has_term_section_headings(renderer: ReportRenderer) -> None:
+def test_area_report_renders_one_card_per_unique_article(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    for name in ("game_model", "style_of_play", "tracking_data", "Other"):
-        assert 'id="term-' in html or name in html  # section anchors exist
-    assert html.count('<section class="term"') == 4
+    # 4 unique articles -> 4 cards (no duplication of the multi-term article).
+    assert html.count('<article class="card') == 4
 
 
-def test_area_report_renders_one_card_per_term_membership(renderer: ReportRenderer) -> None:
+def test_area_report_has_filter_button_per_term_plus_all(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    # strong (2 terms) + moderate + borderline + untagged = 5 cards.
-    assert html.count('<article class="card') == 5
+    # "All" + one button per term (game_model, style_of_play, tracking_data, Other).
+    assert html.count('class="filter-btn"') == 5
+    assert 'data-term="all"' in html
+    for term in ("game_model", "style_of_play", "tracking_data", "Other"):
+        assert f'data-term="{term}"' in html
+
+
+def test_area_report_card_carries_data_terms_attribute(renderer: ReportRenderer) -> None:
+    html = _area_html(renderer)
+    # The multi-term (strong) card carries every matched term as a token.
+    assert 'data-terms="game_model style_of_play"' in html
+    # The untagged card is tagged with the synthetic "other" token.
+    assert 'data-terms="other"' in html
+
+
+def test_area_report_term_pills_no_current_distinction(renderer: ReportRenderer) -> None:
+    html = _area_html(renderer)
+    # No "current" pill class or "also:" prefix — all matched-term pills are equal.
+    assert "pill current" not in html
+    assert "also:" not in html
+    # The multi-term card shows one pill per matched term.
+    assert html.count(">game_model<") + html.count(">game_model ") >= 1
+    assert html.count(">style_of_play<") + html.count(">style_of_play ") >= 1
+    # Untagged card shows a single Other pill.
+    assert 'class="pill other">Other<' in html
+
+
+def test_area_report_has_filter_script_and_hash_handler(renderer: ReportRenderer) -> None:
+    html = _area_html(renderer)
+    # The inline filter script reads/writes the URL hash and toggles card visibility.
+    assert "termFromHash" in html
+    assert "hashchange" in html
+    assert "applyFilter" in html
+    # Empty-filter placeholder exists for filters that match zero cards.
+    assert 'id="empty-filter"' in html
 
 
 def test_area_report_flags_borderline_articles(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    # 64 and 61 fall within threshold(60) ± 5 → borderline.
-    # Each borderline card carries a flag span and a border-left borderline class.
-    assert html.count("flag-borderline") >= 2  # spans only (CSS uses a separate selector name)
-    assert html.count("is-borderline") >= 2  # card class
+    # 64 and 61 fall within threshold(60) ± 5 -> borderline (one card each now).
+    assert html.count("flag-borderline") >= 2
+    assert html.count("is-borderline") >= 2
 
 
 def test_area_report_includes_key_takeaway_element(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    # The strong card has a key_takeaway from the screening result and renders it.
+    # The strong card has a key_takeaway and renders it once (no duplication).
     assert "Use the positional compactness index in opposition reports." in html
-    assert html.count('class="takeaway"') == 2  # appears under both terms the article matches
+    assert html.count('class="takeaway"') == 1
 
 
 def test_area_report_falls_back_to_first_action_point_for_takeaway(
@@ -180,21 +214,18 @@ def test_area_report_falls_back_to_first_action_point_for_takeaway(
 
 def test_area_report_has_copy_citation_button(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    assert html.count('class="btn-copy"') == 5  # one per card
-    # The strong article appears twice; each card carries the DOI link in data-citation.
+    assert html.count('class="btn-copy"') == 4  # one per unique card
+    # The strong article's DOI link appears once (not duplicated per term).
     assert "https://doi.org/10.9999/strong" in html
-
-
-def test_area_report_has_sticky_sidebar_and_mobile_term_chips(renderer: ReportRenderer) -> None:
-    html = _area_html(renderer)
-    assert 'nav class="toc"' in html
-    assert 'class="term-chips"' in html
 
 
 def test_area_report_has_print_stylesheet(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
     assert "@media print" in html
     assert "details.abstract > .abstract-body" in html
+    # Filter buttons are hidden in print; hidden cards are forced visible.
+    assert ".filters" in html
+    assert 'article.card[hidden]' in html
 
 
 def test_area_report_abstract_is_collapsible(renderer: ReportRenderer) -> None:
@@ -210,7 +241,7 @@ def test_area_report_category_chips_use_text_weight_not_icons(renderer: ReportRe
     assert "icon" not in html.lower()
 
 
-# ── Snapshot: representative card + term section fragments ────────────────────
+# ── Snapshot: representative card + filter bar fragments ────────────────────
 
 
 def test_snapshot_strong_article_card_fragment(renderer: ReportRenderer) -> None:
@@ -221,27 +252,28 @@ def test_snapshot_strong_article_card_fragment(renderer: ReportRenderer) -> None
     end = html.find("</article>", start) + len("</article>")
     card = html[start:end]
     snapshot = (
-        '<article class="card band-strong">\n'
-        '          <div class="card-top">\n'
-        '            <div class="badges">\n'
-        '                <span class="score band-strong">88</span>\n'
-        '                <span class="chip directly-actionable">directly actionable</span>\n'
+        '<article class="card band-strong" data-terms="game_model style_of_play">\n'
+        '        <div class="card-top">\n'
+        '          <div class="badges">\n'
+        '              <span class="score band-strong">88</span>\n'
+        '              <span class="chip directly-actionable">directly actionable</span>\n'
     )
     # Prefix must match exactly so future styling refactors don't silently break the header.
     assert card.startswith(snapshot)
 
 
-def test_snapshot_term_section_has_heading_and_anchor(renderer: ReportRenderer) -> None:
+def test_snapshot_filter_bar_fragment(renderer: ReportRenderer) -> None:
     html = _area_html(renderer)
-    start = html.find('<section class="term" id="term-tracking-data">')
+    start = html.find('<div class="filters"')
     assert start != -1
-    end = html.find("</section>", start) + len("</section>")
-    section = html[start:end]
-    assert section.startswith('<section class="term" id="term-tracking-data">')
-    assert "<h2>tracking_data</h2>" in section
-    # tracking_data bucket holds the moderate and borderline cards (score desc).
-    assert "Moderate monitoring paper" in section
-    assert "Borderline paper just above threshold" in section
+    end = html.find("</div>", start) + len("</div>")
+    bar = html[start:end]
+    assert bar.startswith('<div class="filters"')
+    # "All" button is first and pressed by default.
+    assert 'data-term="all" aria-pressed="true"' in bar
+    # Each term button carries its count.
+    assert "game_model <span" in bar
+    assert "tracking_data <span" in bar
 
 
 # ── render_index stays functionally unchanged ────────────────────────────────

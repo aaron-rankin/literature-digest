@@ -7,7 +7,7 @@ Phase 1 because rendering is stable infrastructure with no external APIs to mock
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -33,58 +33,58 @@ class AreaIndexRow:
 
 
 @dataclass
-class TermSection:
-    """One per-term group of articles in an area report."""
+class TermMeta:
+    """One search term exposed as a filter button in the area report."""
 
     name: str
-    articles: list[Article] = field(default_factory=list)
-
-    @property
-    def slug(self) -> str:
-        """Anchor-friendly slug for the term name."""
-        return "".join(c if c.isalnum() else "-" for c in self.name.lower()).strip("-")
-
-    @property
-    def count(self) -> int:
-        return len(self.articles)
+    count: int
 
 
-def build_term_sections(articles: list[Article]) -> list[TermSection]:
-    """Group articles by matched search term, sorted by score within each term.
+def _sort_key(a: Article) -> tuple[int, int]:
+    """Sort scored articles first by score descending; unscored articles last."""
+    score = a.screening.score if a.screening else -1
+    return (0 if a.screening else 1, -score)
 
-    An article matched by multiple terms appears once under each matching term
-    (D7 / Q3). Each term's articles are sorted by screening score descending;
-    unscored articles sort last. Terms are returned in first-seen order of
-    `Article.matched_terms`, with any articles that have no matched terms
-    collected under a single "Other" section at the end.
+
+def build_filterable_articles(
+    articles: list[Article],
+) -> tuple[list[Article], list[TermMeta]]:
+    """Deduplicate, sort, and index articles for the flat filtered report.
+
+    Each article appears exactly once in the returned list, sorted by screening
+    score descending globally (unscored articles sort last). The companion
+    ``TermMeta`` list enumerates every distinct matched search term in
+    first-seen order of ``Article.matched_terms``, plus an ``"Other"`` entry
+    when any untagged articles are present. A multi-term article counts toward
+    *each* matching term's count (so the sum of per-term counts can exceed the
+    unique total) — this matches the per-term duplication the filter reproduces.
     """
     order: list[str] = []
-    buckets: dict[str, list[Article]] = {}
-    untagged: list[Article] = []
+    counts: dict[str, int] = {}
+    has_other = False
 
     for art in articles:
         terms = art.matched_terms
         if not terms:
-            untagged.append(art)
+            has_other = True
             continue
         for term in terms:
-            if term not in buckets:
-                buckets[term] = []
+            if term not in counts:
+                counts[term] = 0
                 order.append(term)
-            # Avoid duplicating the same article inside one term bucket.
-            if art not in buckets[term]:
-                buckets[term].append(art)
+            counts[term] += 1
 
-    def _sort_key(a: Article) -> tuple[int, int]:
-        score = a.screening.score if a.screening else -1
-        return (1 if a.screening else 0, -score)
+    sorted_articles = sorted(articles, key=_sort_key)
 
-    sections = [
-        TermSection(name=name, articles=sorted(buckets[name], key=_sort_key)) for name in order
-    ]
-    if untagged:
-        sections.append(TermSection(name="Other", articles=sorted(untagged, key=_sort_key)))
-    return sections
+    terms_meta = [TermMeta(name=name, count=counts[name]) for name in order]
+    if has_other:
+        terms_meta.append(
+            TermMeta(
+                name="Other",
+                count=sum(1 for a in articles if not a.matched_terms),
+            )
+        )
+    return sorted_articles, terms_meta
 
 
 class ReportRenderer:
@@ -117,17 +117,18 @@ class ReportRenderer:
     ) -> Path:
         """Render one area's HTML report. Returns the path written.
 
-        Articles are grouped by search term (D7), sorted by score descending
-        within each term. Articles whose score falls within ``threshold ±
-        borderline_band`` are flagged "borderline" so the template can mark
-        them (D9).
+        Articles are deduplicated into a single flat list sorted by score
+        descending globally (unscored last). Each matched search term becomes a
+        filter button along the top of the report. Articles whose score falls
+        within ``threshold ± borderline_band`` are flagged "borderline" so the
+        template can mark them (D9).
         """
-        sections = build_term_sections(articles)
+        sorted_articles, terms = build_filterable_articles(articles)
         template = self.env.get_template("area.html.j2")
         html = template.render(
             area=area,
-            articles=articles,
-            sections=sections,
+            articles=sorted_articles,
+            terms=terms,
             threshold=threshold,
             borderline_band=borderline_band,
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
